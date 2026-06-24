@@ -221,9 +221,9 @@ Added Host Firewall engine.
 Did some code cleanup.
 Removed references to XDR where possible.
 
-## XDR End of Life issue August 2024
+## SecureX End of Life issue August 2024
 
-There have been some reports of the tool not working after XDR End of Life. This is due to your API credentials being tied to a disabled XDR account.
+There have been some reports of the tool not working after SecureX End of Life. This is due to your API credentials being tied to a disabled SecureX account.
 
 To fix this, go to the new Secure Client portal in your region and generate new API credentials. Then, replace the old credentials in your .env file.
 
