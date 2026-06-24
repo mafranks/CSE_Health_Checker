@@ -94,12 +94,15 @@ class Data:
             self.policy_serial_compare(self.policy_dict['policy_uuid'], \
                 self.policy_dict['policy_sn'])
         try:
-            self.tetra_version = json.loads(self.dig_thru_xml("agent", "engine", "stats", \
-                "definitions", root=self.get_root("C:/Program Files/Cisco/AMP/local.xml"), \
-                    tag=""))['engineDefinitions'][0]['defVersion'].split(":")[1]
+            definitions = self.dig_thru_xml("agent", "engine", "stats", "definitions", \
+                root=self.get_root("C:/Program Files/Cisco/AMP/local.xml"), tag="")
+            def_version = json.loads(definitions)['engineDefinitions'][0]['defVersion']
+            if not def_version:
+                raise ValueError("TETRA defVersion is missing")
+            self.tetra_version = def_version.split(":")[1]
             self.tetra_version_display = str(self.tetra_version)
-        except IndexError:
-            logging.error("tetra_version or tetra_version_display IndexError")
+        except (AttributeError, IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            logging.error("Unable to determine TETRA version from local.xml")
             self.tetra_version = 0
             self.tetra_version_display = str(self.tetra_version)
         #self.tetra_def_compare() #removing from init, on-demand only
@@ -296,8 +299,15 @@ class Data:
             self.connectivity_urls = PCADDRESSLIST
         self.cpu_list.append((time.ctime(), self.get_cpu_usage()))
         self.current_cpu = self.cpu_list[-1][1]
-        with open(self.sfc_path, errors="ignore") as file_1:
-            file_read = file_1.readlines()
+        try:
+            with open(self.sfc_path, errors="ignore") as file_1:
+                file_read = file_1.readlines()
+        except OSError as e:
+            logging.warning(f"Unable to read SFC log {self.sfc_path}: {e}")
+            return
+        if len(file_read) < 2:
+            logging.warning(f"SFC log {self.sfc_path} does not have enough data to parse")
+            return
         if self.last_log_line in file_read:
             start_index = file_read.index(self.last_log_line)
             logging.debug(f"start_index: {start_index}")
@@ -416,7 +426,7 @@ class Data:
         '''
         logging.debug("Starting get_top_processes")
         c_count = Counter(self.get_processes()).most_common(n_count)
-        return "\n".join([f"{i[1]:<5} | {i[0].split(",")[0]}" for i in c_count])
+        return "\n".join([f"{i[1]:<5} | {i[0].split(',')[0]}" for i in c_count])
 
     def get_top_extensions(self, n_count=None):
         '''
@@ -751,13 +761,13 @@ class Data:
         if platform.machine().endswith('64'):
             url = "http://update.amp.cisco.com/av64bit/versions.id"
         else:
-            url = "http://udpate.amp.cisco.com/av32bit/versions.id"
+            url = "http://update.amp.cisco.com/av32bit/versions.id"
         logging.debug(f"requesting {url}")
         try:
             if self.proxies:
-                r = requests.get(url, proxies=self.proxies)
+                r = requests.get(url, proxies=self.proxies, timeout=10)
             else:
-                r = requests.get(url)
+                r = requests.get(url, timeout=10)
             j = r.text
             self.tetra_latest = j.split('value="')[1].split('"')[0]
             logging.debug(f"tetra_latest: {self.tetra_latest}")
@@ -777,10 +787,11 @@ class Data:
             else:    #TETRA definitions are not up to date
                 self.tetra_color = "yellow"
                 self.tetra_version_display = str(self.tetra_version)
-        except requests.exceptions.ConnectionError:
-            logging.warning("requests.exceptions.ConnectionError")
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Unable to retrieve latest TETRA version: {e}")
             self.tetra_color = "yellow"
-        except IndexError:
+        except (IndexError, TypeError, ValueError):
+            logging.warning("Unable to parse latest TETRA version")
             self.tetra_color = "yellow"
 
     def update_api_calls(self):
@@ -792,10 +803,13 @@ class Data:
             "serial_number", root=self.policy_xml_root)
         self.policy_serial_compare(self.policy_dict['policy_uuid'], self.policy_dict['policy_sn'])
         try:
-            self.tetra_version = self.dig_thru_xml("agent", "engine", "tetra", "defversions", \
-                root=self.get_root("C:/Program Files/Cisco/AMP/local.xml"), tag="").split(':')[1]
-        except IndexError:
-            logging.warning("IndexError in digging through xml")
+            def_versions = self.dig_thru_xml("agent", "engine", "tetra", "defversions", \
+                root=self.get_root("C:/Program Files/Cisco/AMP/local.xml"), tag="")
+            if not def_versions:
+                raise ValueError("TETRA defversions is missing")
+            self.tetra_version = def_versions.split(':')[1]
+        except (AttributeError, IndexError, TypeError, ValueError):
+            logging.warning("Unable to determine TETRA version from local.xml")
             self.tetra_version = 0
         self.tetra_def_compare()
 
@@ -834,7 +848,7 @@ class Data:
         except requests.exceptions.ConnectionError as e:
             logging.debug(f"requests.exceptions.ConnectionError: {e}")
             self.api_cred_valid = False
-        except AttributeError:
+        except AttributeError as e:
             logging.debug(f"AttributeError: {e}")
             self.api_cred_valid = False
         except UnboundLocalError:
@@ -890,6 +904,7 @@ class Data:
         '''
         logging.debug("data.check_for_amp: Running data.check_for_amp")
         amp_installed = False
+        amp_running = False
         for proc in psutil.process_iter():
             try:
                 if proc.name() == "sfc.exe":

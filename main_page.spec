@@ -12,6 +12,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
+    optimize=0,
 )
 pyz = PYZ(a.pure)
 
@@ -35,4 +36,10 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['amp-icon.ico'],
+)
+app = BUNDLE(
+    exe,
+    name='main_page.app',
+    icon='amp-icon.ico',
+    bundle_identifier=None,
 )

@@ -48,13 +48,14 @@ def analysis(data):
         window.Element("_top_folders").Update("Top 10 Folders\n"+data.get_top_folders(10))
         window.Element("_top_exclusions").Update("Top 10 Exclusions Hit\n"+data.get_top_exclusions(10))
         window.Refresh()
-        if values.get("Save As") != to_save:
+        save_as = values.get("Save As")
+        if save_as and save_as != to_save:
             to_save = f"Top 10 Processes\n{data.get_top_processes(10)}\n\n"
             to_save += f"Top 10 Paths\n{data.get_top_paths(10)}\n\n"
             to_save += f"Top 10 Extensions\n{data.get_top_extensions(10)}\n\n"
             to_save += f"Top 10 Folders\n{data.get_top_folders(10)}"
             to_save += f"Top 10 Exclusions Hit\n{data.get_top_exclusions(10)}"
-            with open(values.get("Save As"), "w") as f:
+            with open(save_as, "w") as f:
                 f.write(to_save)
 
     window.close()
@@ -94,9 +95,10 @@ def just_process(data):
         elif event == "Reset Data":
             data.reset_data()
             window.Refresh()
-        if values.get("Save As") != to_save:
-            to_save = values.get("Save As")
-            with open(values.get("Save As"), "w") as f:
+        save_as = values.get("Save As")
+        if save_as and save_as != to_save:
+            to_save = save_as
+            with open(save_as, "w") as f:
                 f.write(data.get_top_processes())
         if running:
             window.Element("_data").Update(data.get_top_processes())
@@ -199,9 +201,10 @@ def lpap(data):
             window.find_element('_inner_file_scan').Update(data.inner_file_count)
             window.Element("_running").Update("Status: READY")
             window.Refresh()
-        if values.get("Save As") != to_save:
-            to_save = values.get("Save As")
-            with open(values.get("Save As"), "w") as file:
+        save_as = values.get("Save As")
+        if save_as and save_as != to_save:
+            to_save = save_as
+            with open(save_as, "w") as file:
                 file.write(data.convert_to_layout())
         if running:
             window.Element("_data").Update(data.convert_to_layout())
@@ -483,12 +486,22 @@ def manual_sfc(data):
                 message="Choose New SFC.log",
                 default_path=data.sfc_path,
                 initial_folder=f"{data.root_path}/{data.version}")
+            if not new_sfc_file:
+                continue
             data.sfc_path = new_sfc_file
             window.Element("_path_display").Update(f"Current SFC Log: {data.sfc_path}")
             window.Refresh()
         elif event == "Analyze":
-            with open(data.sfc_path) as file:
-                data.last_log_line = file.readlines()[0]
+            try:
+                with open(data.sfc_path) as file:
+                    file_read = file.readlines()
+            except OSError as e:
+                sg.popup(f"Unable to read SFC log: {e}", title="SFC Log Error")
+                continue
+            if not file_read:
+                sg.popup("Selected SFC log is empty.", title="SFC Log Error")
+                continue
+            data.last_log_line = file_read[0]
             data.update()
             window.find_element('_quarantine_count').Update(data.quarantine_count)
             window.find_element('_spero_count').Update(data.spero_count)

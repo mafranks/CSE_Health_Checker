@@ -52,7 +52,7 @@ class LivePathAndProcess:
         """
 
         reg_1 = r"\w\w\w \d\d \d\d:\d\d:\d\d.*\\\\\?\\.*\\\\\?\\.*\\\\\?\\.*"
-        sfc_logs = list(path.glob("{version}/sfc.exe.log"))
+        sfc_logs = list(path.glob(f"{version}/sfc.exe.log"))
         if sfc_logs:
             with open(sfc_logs[0]) as file:
                 file_read = file.readlines()[-1000:]
@@ -121,9 +121,10 @@ def main():
         elif event == "Resume":
             running = True
             window.Element("_running").Update("Status: RUNNING")
-        if values.get("Save As") != to_save:
-            to_save = values.get("Save As")
-            with open(values.get("Save As"), "w") as file:
+        save_as = values.get("Save As")
+        if save_as and save_as != to_save:
+            to_save = save_as
+            with open(save_as, "w") as file:
                 file.write(values.get(lppc.key))
         if running:
             lppc.update(window)

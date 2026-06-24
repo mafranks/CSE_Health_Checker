@@ -111,7 +111,7 @@ The CLIENT_ID and API_KEY will be generated in the [Secure Endpoints console](ht
 
 The SX_CLIENT_ID and SX_API_KEY will be generated in the [Secure Client console](https://securex.us.security.cisco.com/settings/apiClients).
 
-The ORG_NAME is your SecureX Organization name. Keep in mind you may have more than one organization so choose the appropriate one that matches your Secure Endpoint deployment. The SecureX Organization name is displayed in the top right corner of the SecureX console.
+The ORG_NAME is your XDR Organization name. Keep in mind you may have more than one organization so choose the appropriate one that matches your Secure Endpoint deployment. The XDR Organization name is displayed in the top right corner of the XDR console.
 
 You can use the .env file as an example and just fill in your information.
 
@@ -219,11 +219,11 @@ Fixed Top IP processing.
 Fixed Top Exclusions formatting.
 Added Host Firewall engine.
 Did some code cleanup.
-Removed references to SecureX where possible.
+Removed references to XDR where possible.
 
-## SecureX End of Life issue August 2024
+## XDR End of Life issue August 2024
 
-There have been some reports of the tool not working after SecureX End of Life. This is due to your API credentials being tied to a disabled SecureX account.
+There have been some reports of the tool not working after XDR End of Life. This is due to your API credentials being tied to a disabled XDR account.
 
 To fix this, go to the new Secure Client portal in your region and generate new API credentials. Then, replace the old credentials in your .env file.
 
@@ -235,6 +235,6 @@ Made changes to allow for use with Private Cloud. The .env file should contain a
 
 ## AUTHENTICATION UPDATE December 2022
 
-Due to changes in the accessibility of the policy.xml file in the 8.1.3 release, authentication for the Health Checker tool had to be updated to include SecureX API authenticaiton. The SecureX API allows access to the policy.xml file which is required for proper operation of the tool. See the API Credentials section below for more information.
+Due to changes in the accessibility of the policy.xml file in the 8.1.3 release, authentication for the Health Checker tool had to be updated to include XDR API authenticaiton. The XDR API allows access to the policy.xml file which is required for proper operation of the tool. See the API Credentials section below for more information.
 
 The Device Control engine was also added in the Engines Check section.
