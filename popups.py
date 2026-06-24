@@ -301,6 +301,7 @@ def check_latest_policy(data, window):
         window.find_element('_policy_version_button').Update(disabled=False)
         window.Element("_latest_policy_version").Update("Invalid API")
         return
+    data.refresh_local_policy_serial()
     data.policy_serial_compare(data.policy_dict['policy_uuid'], data.policy_dict['policy_sn'])
     window.Element("_latest_policy_version").set_size((25, 1))
     window.Element("_latest_policy_version").Update(f"Latest Serial:        {data.policy_serial}")

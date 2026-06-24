@@ -93,18 +93,7 @@ class Data:
             logging.debug("Found self.auth")
             self.policy_serial_compare(self.policy_dict['policy_uuid'], \
                 self.policy_dict['policy_sn'])
-        try:
-            definitions = self.dig_thru_xml("agent", "engine", "stats", "definitions", \
-                root=self.get_root("C:/Program Files/Cisco/AMP/local.xml"), tag="")
-            def_version = json.loads(definitions)['engineDefinitions'][0]['defVersion']
-            if not def_version:
-                raise ValueError("TETRA defVersion is missing")
-            self.tetra_version = def_version.split(":")[1]
-            self.tetra_version_display = str(self.tetra_version)
-        except (AttributeError, IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError):
-            logging.error("Unable to determine TETRA version from local.xml")
-            self.tetra_version = 0
-            self.tetra_version_display = str(self.tetra_version)
+        self.refresh_local_tetra_version()
         #self.tetra_def_compare() #removing from init, on-demand only
         self.isolation_check()
         self.conn_test_results = {}
@@ -493,6 +482,52 @@ class Data:
             logging.debug(f"root: {root}")
         return root
 
+    def parse_tetra_def_version(self, definitions):
+        '''
+        Extract the TETRA definition version from local.xml engine statistics.
+        '''
+        if not definitions:
+            raise ValueError("TETRA definitions are missing")
+        engine_definitions = json.loads(definitions).get('engineDefinitions', [])
+        if not isinstance(engine_definitions, list):
+            raise ValueError("TETRA engineDefinitions is not a list")
+
+        for engine in engine_definitions:
+            if not isinstance(engine, dict) or str(engine.get('engineId')) != "2":
+                continue
+            def_version = engine.get('defVersion', '')
+            if not def_version:
+                raise ValueError("TETRA defVersion is missing")
+            return def_version.split(':')[-1].strip()
+        raise ValueError("TETRA engine definition was not found")
+
+    def refresh_local_tetra_version(self):
+        '''
+        Refresh the local TETRA version from local.xml.
+        '''
+        try:
+            definitions = self.dig_thru_xml("agent", "engine", "stats", "definitions", \
+                root=self.get_root("C:/Program Files/Cisco/AMP/local.xml"), tag="")
+            self.tetra_version = self.parse_tetra_def_version(definitions)
+            self.tetra_version_display = str(self.tetra_version)
+        except (AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            logging.warning("Unable to determine TETRA version from local.xml")
+            self.tetra_version = 0
+            self.tetra_version_display = str(self.tetra_version)
+
+    def refresh_local_policy_serial(self):
+        '''
+        Refresh the local policy serial from policy.xml when it is available.
+        '''
+        try:
+            self.policy_xml_root = self.get_root(r"C:/Program Files/Cisco/AMP/policy.xml")
+            policy_sn = self.dig_thru_xml("Object", "config", "janus", "policy", \
+                "serial_number", root=self.policy_xml_root)
+            if policy_sn:
+                self.policy_dict['policy_sn'] = policy_sn
+        except OSError as e:
+            logging.warning(f"Unable to refresh local policy serial from policy.xml: {e}")
+
     def parse_xml(self, path=r"C:/Program Files/Cisco/AMP/policy.xml"):
         """
         takes policy key's and their route-to-values, returns dictionary of the key-value pairs
@@ -758,6 +793,7 @@ class Data:
         '''
         Check to see if the TETRA definitions are up to date.
         '''
+        self.refresh_local_tetra_version()
         if platform.machine().endswith('64'):
             url = "http://update.amp.cisco.com/av64bit/versions.id"
         else:
@@ -799,18 +835,8 @@ class Data:
         Update the information pulled via the API.
         '''
         logging.info("Running update_api_calls")
-        self.policy_dict['policy_sn'] = self.dig_thru_xml("Object", "config", "janus", "policy", \
-            "serial_number", root=self.policy_xml_root)
+        self.refresh_local_policy_serial()
         self.policy_serial_compare(self.policy_dict['policy_uuid'], self.policy_dict['policy_sn'])
-        try:
-            def_versions = self.dig_thru_xml("agent", "engine", "tetra", "defversions", \
-                root=self.get_root("C:/Program Files/Cisco/AMP/local.xml"), tag="")
-            if not def_versions:
-                raise ValueError("TETRA defversions is missing")
-            self.tetra_version = def_versions.split(':')[1]
-        except (AttributeError, IndexError, TypeError, ValueError):
-            logging.warning("Unable to determine TETRA version from local.xml")
-            self.tetra_version = 0
         self.tetra_def_compare()
 
     def verify_api_creds(self):
