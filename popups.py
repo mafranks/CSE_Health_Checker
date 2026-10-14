@@ -244,16 +244,16 @@ class ManualAnalysisDialog(AnalysisDialog):
 
 
 class LiveScanDialog(LogDialog):
-    """Show recent scan events in a table and retain full collected data for export."""
+    """Rank collected scans by process or process/file-path pair, with full exports."""
 
     def __init__(self, data, runner, parent=None, processes=False):
-        """Create aligned controls, counters, and a large scrolling event/ranking table."""
+        """Create aligned controls, counters, and a large scrolling ranking table."""
         super().__init__("Live Top Processes" if processes else "Live Path and Process", data, runner, parent)
         self.processes, self.running, self.started = processes, processes, processes
         self.add_counters()
         self.cpu = text_label("", "muted")
         self.body.addWidget(self.cpu)
-        self.results = table(("Count", "Process") if processes else ("Time", "Process", "File path"))
+        self.results = table(("Count", "Process") if processes else ("Count", "Process", "File path"))
         self.body.addWidget(self.results, 1)
         self.limit_note = text_label("", "muted")
         self.body.addWidget(self.limit_note)
@@ -313,15 +313,17 @@ class LiveScanDialog(LogDialog):
             self.runner.submit(self.data.update, self.render_results, self.failure)
 
     def render_results(self, result=None):
-        """Render the newest 500 records without losing the complete export history."""
+        """Render bounded rankings using counts from the complete collection session."""
         if self.closed:
             return
         if self.processes:
             rows = ranking_rows(self.data.get_top_processes(100))
             note = "Showing the top 100 processes. Export includes all collected process rankings."
         else:
-            rows = [(record["time"], record["process"], record["path"]) for record in reversed(self.data.data[-500:])]
-            note = f"Showing the latest {len(rows)} of {len(self.data.data)} scan events. Export includes all collected events."
+            rankings = self.data.get_path_process_counts()
+            rows = rankings[:500]
+            note = (f"Showing {len(rows)} of {len(rankings)} unique process/path pairs "
+                    f"from {len(self.data.data)} scan events. Export includes all pairs and counts.")
         fill_table(self.results, rows)
         self.limit_note.setText(note)
         self.cpu.setText(f"Connector CPU: {self.data.current_cpu:.2f}%")
@@ -331,8 +333,8 @@ class LiveScanDialog(LogDialog):
             self.pause()
 
     def save_results(self):
-        """Save all collected records rather than only the bounded table preview."""
-        content = self.data.get_top_processes() if self.processes else self.data.convert_to_layout()
+        """Save every ranking with counts, including pairs beyond the table preview."""
+        content = self.data.get_top_processes() if self.processes else self.data.export_path_process_counts()
         save_text(self, content)
 
 

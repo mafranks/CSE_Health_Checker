@@ -195,6 +195,14 @@ class QtGuiTests(unittest.TestCase):
         dialog.start_button.click()
         wait_until(lambda: not self.window.runner.busy)
         self.assertEqual(len(self.data.data), before + 1)
+        self.assertEqual(dialog.results.rowCount(), 1)
+        self.assertEqual(dialog.results.item(0, 0).text(), "1")
+        with Path(self.data.sfc_path).open("a") as output:
+            output.write(scan_event())
+        dialog.collect()
+        wait_until(lambda: not self.window.runner.busy)
+        self.assertEqual(dialog.results.rowCount(), 1)
+        self.assertEqual(dialog.results.item(0, 0).text(), "2")
         dialog.reset_button.click()
         self.assertEqual(dialog.results.rowCount(), 0)
         self.assertEqual(dialog.status.text(), "READY")
@@ -337,15 +345,42 @@ class QtGuiTests(unittest.TestCase):
         self.assertEqual(dialog.notice.text(), "Invalid certificate")
 
     def test_live_preview_limit_does_not_limit_export(self):
-        """Keep the live table bounded while retaining every collected event for saving."""
+        """Preview the busiest 500 pairs and export all pairs with complete counts."""
+        record = dict(self.data.data[0])
+        self.data.data = [dict(record, path=f"C:\\Example\\file-{i}.txt") for i in range(600)]
+        last = self.data.data[-1]
+        self.data.data.extend([last] * 5)
+        dialog = popups.LiveScanDialog(self.data, self.window.runner, self.window)
+        self.addCleanup(dialog.close)
+        self.assertEqual(dialog.results.rowCount(), 500)
+        self.assertEqual(dialog.results.item(0, 0).text(), "6")
+        self.assertEqual(dialog.results.item(0, 2).text(), last["path"])
+        self.assertIn("500 of 600 unique process/path pairs from 605 scan events", dialog.limit_note.text())
+        with patch.object(popups, "save_text") as save:
+            dialog.save_button.click()
+        exported = save.call_args.args[1].splitlines()
+        self.assertEqual(len(exported), 601)
+        self.assertTrue(exported[1].startswith("6     | "))
+        self.assertIn("file-598.txt", exported[-1])
+
+    def test_live_pairs_accumulate_counts_and_keep_selection_on_refresh(self):
+        """Keep repeated scans in one counted row and follow it when rankings change."""
         record = dict(self.data.data[0])
         self.data.data = [record] * 600
         dialog = popups.LiveScanDialog(self.data, self.window.runner, self.window)
         self.addCleanup(dialog.close)
-        self.assertEqual(dialog.results.rowCount(), 500)
-        with patch.object(popups, "save_text") as save:
-            dialog.save_button.click()
-        self.assertEqual(save.call_args.args[1].count(record["path"]), 600)
+        self.assertEqual([dialog.results.horizontalHeaderItem(i).text() for i in range(3)],
+                         ["Count", "Process", "File path"])
+        self.assertEqual(dialog.results.rowCount(), 1)
+        self.assertEqual(dialog.results.item(0, 0).text(), "600")
+        dialog.results.selectRow(0)
+        self.data.data.extend([dict(record, path=r"C:\Example\other.txt")] * 602 + [record])
+        dialog.render_results()
+        dialog.results.copy_selection()
+        self.assertEqual(dialog.results.rowCount(), 2)
+        self.assertEqual(APP.clipboard().text(), f"601\t{record['process']}\t{record['path']}")
+        dialog.render_results()
+        self.assertEqual(dialog.results.item(1, 0).text(), "601")
 
     def test_readonly_engine_and_report_views(self):
         """Make policy diagnostics visibly read-only and expose missing values as Unknown."""

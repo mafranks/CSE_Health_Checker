@@ -84,6 +84,44 @@ class HealthCheckerTests(unittest.TestCase):
         self.assertIn("sample.txt", self.data.convert_to_layout())
         self.assertEqual(self.data.get_log_status()[0], "RUNNING")
 
+    def test_path_process_counts_group_pairs_across_timestamps(self):
+        """Combine repeated pairs while retaining other processes and file paths."""
+        process, other = r"C:\Example\worker.exe", r"C:\Example\other.exe"
+        path, second = r"D:\Example\sample.txt", r"D:\Example\second.txt"
+        self.data.data = [
+            {"time": "first", "process": process, "path": path},
+            {"time": "second", "process": process, "path": second},
+            {"time": "third", "process": other, "path": path},
+            {"time": "fourth", "process": process, "path": second},
+            {"time": "fifth", "process": process, "path": second},
+        ]
+        self.assertEqual(self.data.get_path_process_counts(),
+                         [(3, process, second), (1, process, path), (1, other, path)])
+        self.assertEqual(sum(row[0] for row in self.data.get_path_process_counts()), 5)
+
+    def test_pair_and_process_counts_ignore_scan_metadata(self):
+        """Count new events once even when their metadata differs between scans."""
+        self.path.write_text(scan_event() + scan_event().replace("flags=0", "flags=1"))
+        self.data.update()
+        self.data.update()
+        process = r"C:\Program Files\Example\worker.exe"
+        path = r"C:\Program Files (x86)\Example\sample.txt"
+        self.assertEqual(self.data.get_path_process_counts(), [(2, process, path)])
+        self.assertEqual(self.data.get_top_processes().split("|", 1)[1].strip(), process)
+        self.assertEqual(self.data.get_top_processes().split("|", 1)[0].strip(), "2")
+        self.data.reset_scan_data()
+        self.data.update()
+        self.assertEqual(self.data.get_path_process_counts(), [])
+
+    def test_pair_export_preserves_full_paths_and_total_counts(self):
+        """Export one row per pair without dropping Unicode, commas, or separators."""
+        process = r"C:\Example, Inc\résumé.exe"
+        path = r"D:\Example\資料 | sample.txt"
+        self.data.data = [{"time": "first", "process": process, "path": path}] * 600
+        self.assertEqual(self.data.get_path_process_counts(), [(600, process, path)])
+        self.assertEqual(self.data.export_path_process_counts(),
+                         f"Count | Process | File path\n600   | {process} | {path}")
+
     def test_malformed_event_does_not_stop_subsequent_records(self):
         """Ignore incomplete records while continuing to collect valid events."""
         self.path.write_text("Sep 22 10:31:18 Event::Handle invalid\n" + scan_event())

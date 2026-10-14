@@ -32,6 +32,7 @@ def parse_scan_event(line):
         return None
     path = path_match.group("path").strip()
     process = remainder[paths[-1].start():].strip()
+    process = re.split(r",\s+(?=[A-Za-z_][A-Za-z0-9_]*=)", process, maxsplit=1)[0]
     path = normalize_log_path(path)
     process = normalize_log_path(process)
     if not path or not process:

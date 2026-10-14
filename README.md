@@ -67,7 +67,7 @@ Ensure Secure Endpoint is installed and running, then start `main_page.py` or th
 
 The **Dark mode: On/Off** toggle at the top right switches the dashboard and all tool windows between light and dark themes immediately. The app follows the system appearance until you choose a mode; your selection is then saved for future launches. Both themes include readable card titles, status badges, tables, text reports, and controls.
 
-Live scan events use a resizable table, and analysis categories use tabs. Every tool window has a **Full screen** button and supports **F11**. **Escape** leaves full screen first; a second Escape closes the tool. Native maximize is also available. Slow API, connectivity, file-analysis, and diagnostic operations run in a serialized background queue, keeping the interface responsive and preventing concurrent changes to connector data. Closing waits for active work to finish.
+Live scan rankings use a resizable table, and analysis categories use tabs. Every tool window has a **Full screen** button and supports **F11**. **Escape** leaves full screen first; a second Escape closes the tool. Native maximize is also available. Slow API, connectivity, file-analysis, and diagnostic operations run in a serialized background queue, keeping the interface responsive and preventing concurrent changes to connector data. Closing waits for active work to finish.
 
 Select table rows and press **Ctrl+C** to copy complete values as tab-separated text. Right-click a cell and choose **Copy value** to copy just its full path or value, even when the display shortens it. Ctrl/Shift selections allow multiple rows, and selections follow their records during live refresh. Text reports and source-log labels also support copying. Results remain read-only.
 
@@ -166,11 +166,11 @@ If authentication is required, use a URL such as `http://user:password@proxy.exa
 
 ### Live paths / processes
 
-Open **Live paths / processes** to inspect file/process scan events, connector CPU usage, and scan activity counters. The view includes the selected source log and an explicit collection status.
+Open **Live paths / processes** to see **Count**, **Process**, and **File path** for each unique process/file-path pair, ranked by the highest scan count. Repeated scans of the same pair increase its count instead of adding duplicate rows. The view also includes connector CPU usage, scan activity counters, the selected source log, and an explicit collection status.
 
-![Live file and process scan events with collection controls and activity counters](images/Live_Debugging.png)
+![Live process and file-path rankings with scan counts and collection controls](images/Live_Debugging.png)
 
-Press **Start / Resume** to begin collection, **Pause** to stop polling, and **Start / Resume** to continue. **Reset data** clears collected counters and results without rereading old log records. **Save results…** exports every collected event; the table previews only the latest 500. **Close** returns to the dashboard.
+Press **Start / Resume** to begin collection, **Pause** to stop polling, and **Start / Resume** to continue with the existing counts. **Reset data** clears collected counters and results without rereading old log records. The table previews the top 500 unique pairs, using counts from all collected events. **Save results…** exports every unique pair and its count, including pairs beyond the preview limit. **Close** returns to the dashboard.
 
 ### Live Top Processes
 

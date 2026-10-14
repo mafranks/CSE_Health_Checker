@@ -29,7 +29,14 @@ class ScanEventTests(unittest.TestCase):
                 result = parse_scan_event(scan_event(timestamp))
                 self.assertEqual(result["time"], timestamp)
                 self.assertEqual(result["path"], r"C:\Program Files (x86)\Example\sample.txt")
-                self.assertEqual(result["process"].split(",")[0], r"C:\Program Files\Example\worker.exe")
+                self.assertEqual(result["process"], r"C:\Program Files\Example\worker.exe")
+
+    def test_process_path_preserves_commas_without_event_metadata(self):
+        """Keep the complete executable path while removing trailing key/value fields."""
+        process = r"C:\Program Files\Example, Inc\résumé.exe"
+        line = scan_event().replace(r"C:\Program Files\Example\worker.exe", process)
+        self.assertEqual(parse_scan_event(line)["process"], process)
+        self.assertEqual(parse_scan_event(line.replace("flags=0", "flags=42, other=1"))["process"], process)
 
     def test_normal_windows_paths(self):
         """Accept paths without the extended Windows prefix."""

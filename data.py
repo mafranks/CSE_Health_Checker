@@ -322,7 +322,18 @@ class Data:
     def get_top_processes(self, n_count=None):
         """Rank processes by the number of collected scan events."""
         counts = Counter(self.get_processes()).most_common(n_count)
-        return "\n".join(f"{count:<5} | {process.split(',')[0]}" for process, count in counts)
+        return "\n".join(f"{count:<5} | {process}" for process, count in counts)
+
+    def get_path_process_counts(self):
+        """Rank unique process/file-path pairs across all collected scan events."""
+        counts = Counter((record["process"], record["path"]) for record in self.data)
+        return [(count, process, path) for (process, path), count in counts.most_common()]
+
+    def export_path_process_counts(self):
+        """Export every unique process/file-path pair with its complete scan count."""
+        rows = self.get_path_process_counts()
+        return "Count | Process | File path\n" + "\n".join(
+            f"{count:<5} | {process} | {path}" for count, process, path in rows)
 
     def get_top_extensions(self, n_count=None):
         '''
