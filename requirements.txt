@@ -1,0 +1,6 @@
+# Runtime: Python 3.10–3.15, 64-bit Windows.
+# Allow compatible Qt updates so pip can select wheels for newer Python releases.
+PySide6>=6.12,<7
+psutil>=5.9.6,<8
+python-dotenv>=1.0,<2
+requests>=2.32,<3
