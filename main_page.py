@@ -256,7 +256,7 @@ class MainWindow(QMainWindow):
             return
         self.update_status()
         self.setup_notice.hide()
-        self.statusBar().showMessage("Ready")
+        self.check_version("tetra")
 
     def startup_failed(self, message):
         """Keep standalone tools available and show connector setup errors inline."""
@@ -295,7 +295,9 @@ class MainWindow(QMainWindow):
         set_badge(self.fields["api"], "Valid" if data.api_cred_valid else "Invalid", "good" if data.api_cred_valid else "warning")
         set_badge(self.fields["tetra"], data.tetra_version_display, tone_for_color(getattr(data, "tetra_color", None)))
         set_badge(self.fields["policy"], data.policy_dict.get("policy_sn", "Unknown"), tone_for_color(getattr(data, "policy_color", None)))
-        if getattr(data, "tetra_latest", 0):
+        if getattr(data, "tetra_error", ""):
+            self.fields["tetra_result"].setText(data.tetra_error)
+        elif getattr(data, "tetra_latest", 0):
             self.fields["tetra_result"].setText(f"Latest cloud version: {data.tetra_latest}")
         if hasattr(data, "policy_error"):
             self.fields["policy_result"].setText(data.get_policy_check_text())

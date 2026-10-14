@@ -111,7 +111,7 @@ For additional information on Endpoint Isolation, please refer to the [Secure En
 
 ### TETRA Version
 
-This displays the connector's installed TETRA definition version. Click **Check version** beside TETRA to retrieve the cloud version. Green indicates that the installed definition number is current or up to five numbers behind the cloud value. Yellow indicates older or unavailable definitions, or a lookup failure. A disabled TETRA engine can appear as **DISABLED** in red. The latest cloud version is displayed below the installed version after a successful check.
+This displays the connector's installed TETRA definition version and automatically checks it against the cloud when the Health Checker starts. The check runs in the background and does not require API credentials. Click **Check version** beside TETRA to check again. Green indicates that the installed definition number is current or up to five numbers behind the cloud value. Yellow indicates older or unavailable definitions, or a lookup failure. A disabled TETRA engine can appear as **DISABLED** in red. The latest cloud version is displayed below the installed version after a successful check. If the lookup fails, the reason appears below the version and the manual check remains available for retrying.
 
 ![Definitions and policy card with installed and latest cloud versions](images/TETRA_Version.png)
 

@@ -626,6 +626,7 @@ class Data:
         '''
         Check to see if the TETRA definitions are up to date.
         '''
+        self.tetra_latest, self.tetra_error = 0, ""
         self.refresh_local_tetra_version()
         if platform.machine().endswith('64'):
             url = "http://update.amp.cisco.com/av64bit/versions.id"
@@ -637,6 +638,7 @@ class Data:
                 r = requests.get(url, proxies=self.proxies, timeout=10)
             else:
                 r = requests.get(url, timeout=10)
+            r.raise_for_status()
             j = r.text
             self.tetra_latest = j.split('value="')[1].split('"')[0]
             logging.debug(f"tetra_latest: {self.tetra_latest}")
@@ -656,9 +658,11 @@ class Data:
         except requests.exceptions.RequestException as e:
             logging.warning(f"Unable to retrieve latest TETRA version: {e}")
             self.tetra_color = "yellow"
+            self.tetra_error = "Latest TETRA version unavailable. Check network connectivity and retry."
         except (IndexError, TypeError, ValueError):
             logging.warning("Unable to parse latest TETRA version")
             self.tetra_color = "yellow"
+            self.tetra_error = "Latest TETRA version unavailable. The update server returned an invalid version."
 
     def update_api_calls(self):
         '''

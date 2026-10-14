@@ -17,6 +17,7 @@ def populate_test_dashboard_metadata(data):
     data.local_uuid = "00000000-0000-4000-8000-000000000001"
     data.tetra_version_display, data.tetra_latest = "97526", "97526"
     data.tetra_color, data.policy_color = "Green", "Yellow"
+    data.tetra_def_compare = Mock()
     data.policy_dict["policy_sn"] = "4147"
     data.api_cred_valid = True
     return data

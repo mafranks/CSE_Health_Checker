@@ -60,6 +60,57 @@ class QtGuiTests(unittest.TestCase):
         wait_until(lambda: self.window.can_close and not self.window.runner.busy)
         self.warnings.assert_not_called()
 
+    def test_startup_checks_tetra_in_background_without_api_credentials(self):
+        """Check TETRA once after loading while keeping the dashboard responsive."""
+        gate, started = threading.Event(), threading.Event()
+        worker_threads = []
+        self.data.api_cred_valid = False
+        self.data.tetra_latest = 0
+        self.data.tetra_def_compare.reset_mock()
+
+        def compare():
+            """Hold the cloud lookup until the test verifies the pending UI state."""
+            worker_threads.append(threading.get_ident())
+            started.set()
+            gate.wait(3)
+            self.data.tetra_latest = "97527"
+
+        self.data.tetra_def_compare.side_effect = compare
+        window = main_page.MainWindow(data_factory=lambda: self.data)
+
+        def close_window():
+            """Release any pending lookup before closing this extra test window."""
+            gate.set()
+            window.close()
+            wait_until(lambda: window.can_close and not window.runner.busy)
+
+        self.addCleanup(close_window)
+        window.show()
+        wait_until(started.is_set)
+        self.assertTrue(window.runner.busy)
+        self.assertEqual(window.fields["tetra_result"].text(), "Checking cloud version…")
+        self.assertFalse(window.check_buttons["tetra"].isEnabled())
+        self.assertTrue(window.theme_button.isEnabled())
+        self.assertNotEqual(worker_threads[0], threading.get_ident())
+        gate.set()
+        wait_until(lambda: not window.runner.busy)
+        self.data.tetra_def_compare.assert_called_once_with()
+        self.assertEqual(window.fields["tetra_result"].text(), "Latest cloud version: 97527")
+        self.assertTrue(window.check_buttons["tetra"].isEnabled())
+        window.check_buttons["tetra"].click()
+        wait_until(lambda: not window.runner.busy)
+        self.assertEqual(self.data.tetra_def_compare.call_count, 2)
+
+    def test_tetra_lookup_failure_remains_visible_and_allows_retry(self):
+        """Show a failed startup lookup without disabling a subsequent manual check."""
+        self.data.tetra_latest = 0
+        self.data.tetra_color = "yellow"
+        self.data.tetra_error = "Latest TETRA version unavailable. Check network connectivity and retry."
+        self.window.operation_done()
+        self.assertEqual(self.window.fields["tetra_result"].text(), self.data.tetra_error)
+        self.assertEqual(self.window.fields["tetra"].property("tone"), "warning")
+        self.assertTrue(self.window.check_buttons["tetra"].isEnabled())
+
     def test_dashboard_reflows_without_horizontal_scroll(self):
         """Keep labels aligned and all footer controls reachable at several window sizes."""
         sizes = ((1120, 760), (820, 620), (640, 480))
@@ -286,6 +337,7 @@ class QtGuiTests(unittest.TestCase):
         """Wait for connector initialization before completing a requested close."""
         gate = threading.Event()
         self.addCleanup(gate.set)
+        self.data.tetra_def_compare.reset_mock()
 
         def load_data():
             """Return initialized connector data after a controlled startup delay."""
@@ -298,6 +350,7 @@ class QtGuiTests(unittest.TestCase):
         self.assertFalse(window.can_close)
         gate.set()
         wait_until(lambda: window.can_close and not window.runner.busy)
+        self.data.tetra_def_compare.assert_not_called()
 
     def test_closing_does_not_open_new_result_dialogs(self):
         """Suppress completed diagnostic reports after the user has requested shutdown."""

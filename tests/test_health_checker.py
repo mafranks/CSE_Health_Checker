@@ -128,6 +128,39 @@ class HealthCheckerTests(unittest.TestCase):
         self.data.update()
         self.assertEqual(len(self.data.data), 1)
 
+    def test_tetra_lookup_network_failure_clears_stale_cloud_version(self):
+        """Expose lookup failure and allow a later request to restore current results."""
+        self.data.tetra_latest, self.data.tetra_version = "97526", 97526
+        self.data.proxies = {"http": "http://proxy.example:3128"}
+        response = Mock(text='<version value="97527"/>')
+        with patch.object(self.data, "refresh_local_tetra_version"):
+            with patch.object(data_module.requests, "get", side_effect=ApiRequestError("Unavailable")):
+                with self.assertLogs(level="WARNING"):
+                    self.data.tetra_def_compare()
+            self.assertEqual(self.data.tetra_latest, 0)
+            self.assertEqual(self.data.tetra_color, "yellow")
+            self.assertIn("network connectivity", self.data.tetra_error)
+            with patch.object(data_module.requests, "get", return_value=response) as request:
+                self.data.tetra_def_compare()
+        self.assertEqual(self.data.tetra_latest, "97527")
+        self.assertEqual(self.data.tetra_color, "green")
+        self.assertEqual(self.data.tetra_error, "")
+        self.assertEqual(request.call_args.kwargs, {"proxies": self.data.proxies, "timeout": 10})
+        response.raise_for_status.assert_called_once_with()
+
+    def test_tetra_lookup_rejects_http_failure(self):
+        """Do not treat a version in an unsuccessful HTTP response as verified."""
+        self.data.proxies = None
+        response = Mock(text='<version value="97527"/>')
+        response.raise_for_status.side_effect = ApiRequestError("HTTP error")
+        with patch.object(self.data, "refresh_local_tetra_version"):
+            with patch.object(data_module.requests, "get", return_value=response):
+                with self.assertLogs(level="WARNING"):
+                    self.data.tetra_def_compare()
+        self.assertEqual(self.data.tetra_latest, 0)
+        self.assertIn("network connectivity", self.data.tetra_error)
+        self.assertEqual(self.data.tetra_color, "yellow")
+
     def test_read_failure_still_updates_cpu_and_status(self):
         """Show a read failure even though process CPU sampling succeeds."""
         with self.assertLogs(level="WARNING"):
