@@ -94,10 +94,12 @@ def certificate_groups(certificates, as_of=None):
     return groups
 
 
-def format_certificates(certificates):
+def format_certificates(certificates, start=1):
     """Format copyable identities, fingerprints, and exact UTC validity dates."""
+    if isinstance(start, bool) or not isinstance(start, int) or start < 1:
+        raise ValueError("Certificate numbering must start with a positive integer.")
     lines = []
-    for index, certificate in enumerate(certificates, 1):
+    for index, certificate in enumerate(certificates, start):
         start = certificate_time(certificate.valid_from).strftime("%Y-%m-%d %H:%M:%S UTC")
         end = certificate_time(certificate.valid_to).strftime("%Y-%m-%d %H:%M:%S UTC")
         lines.extend(("", f"{index}. {certificate.subject_name}",

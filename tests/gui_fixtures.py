@@ -6,6 +6,7 @@ from unittest.mock import Mock
 from test_health_checker import Data
 from test_sfc_log import scan_event
 from sfc_log import SfcLogReader
+from recommendations import RecommendationReport
 
 
 def populate_test_dashboard_metadata(data):
@@ -18,6 +19,9 @@ def populate_test_dashboard_metadata(data):
     data.tetra_version_display, data.tetra_latest = "97526", "97526"
     data.tetra_color, data.policy_color = "Green", "Yellow"
     data.tetra_def_compare = Mock()
+    data.recommend_exclusions = Mock(return_value=RecommendationReport(
+        {"Example product": ("example.exe",)}, "https://github.com/CiscoSecurity/amp-05-health-checker-windows",
+        "2024-10-30", "Not refreshed", "Synthetic recommendation example for layout tests."))
     data.policy_dict["policy_sn"] = "4147"
     data.api_cred_valid = True
     return data
@@ -36,13 +40,14 @@ def sample_data(directory):
     data.proxies = None
     data.cpu_list = []
     data.get_cpu_usage = Mock(return_value=0.4)
-    data.policy_dict = {"tetra": "1", "spero": "1", "ethos": "1", "orbital": "0", "DFC": "1", "spp": "1",
+    data.policy_dict = {"log_level": "1", "tetra": "1", "spero": "1", "ethos": "1", "orbital": "0", "DFC": "1", "spp": "1",
                         "exprev_enable": "1", "endpoint_isolation": "1", "device_control": "0", "host_firewall": "disabled",
                         "path_exclusions": ["256|3|0|0|.example", r"256|2|1|0|C:\Example\Cache",
                                             r"256|6|0|0|^C:\\Example\\.*\\cache"],
                         "process_exclusions": [r"2|0||C:\Example\worker.exe|1|", r"3|0||C:\Example\service.exe|4|",
                                                r"3|0||C:\Example\sample.exe|48|", r"3|0||C:\Example\monitor.exe|256|"],
                         "executable_exclusions": [("example.exe", "v8")]}
+    data.enabled_debug, data.debug_error, data._debug_override = False, "", None
     data.log_reader = SfcLogReader()
     data.reset_scan_data()
     populate_test_dashboard_metadata(data)

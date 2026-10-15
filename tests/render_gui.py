@@ -42,6 +42,41 @@ def capture_details(window, output):
     window.update_status()
 
 
+def capture_tools(window, data, output):
+    """Render each tool with synthetic endpoint data and public reference certificates."""
+    constructors = (
+        ("Live_Debugging.png", lambda: popups.LiveScanDialog(data, window.runner, window)),
+        ("Live_Top_Processes.png", lambda: popups.LiveScanDialog(data, window.runner, window, processes=True)),
+        ("Run_Analysis.png", lambda: popups.AnalysisDialog(data, window.runner, window)),
+        ("Manual_Analysis.png", lambda: popups.ManualAnalysisDialog(data, window.runner, window)),
+        ("Check_Engines.png", lambda: popups.EnginesDialog(data, window)),
+        ("Certificate_Viewer.png", lambda: popups.CertificatesDialog(window, certificates=read_certificate_file(
+            Path(__file__).parent / "fixtures" / "example_certificate.pem"))),
+        ("Trusted_Signers.png", lambda: popups.TrustedSignersDialog(window)),
+        ("Recommend_Exclusions.png", lambda: popups.RecommendationsDialog(data, window.runner, window)),
+        ("View_Exclusions.png", lambda: popups.ExclusionsDialog(data, window)),
+    )
+    for name, create in constructors:
+        dialog = create()
+        dialog.show()
+        APP.processEvents()
+        wait_until(lambda: not window.runner.busy)
+        if hasattr(dialog, "timer"):
+            dialog.timer.stop()
+        if isinstance(dialog, popups.LogDialog):
+            dialog.source.setText(DISPLAY_PATH)
+        if name == "Live_Debugging.png":
+            dialog.running, dialog.started = True, True
+            popups.set_badge(dialog.status, "RUNNING", "good")
+            dialog.detail.setText(f"Collected {len(data.data)} file/process scan events.")
+            dialog.set_busy(False)
+        capture(dialog, output / name)
+        if isinstance(dialog, popups.ExclusionsDialog):
+            dialog.tabs.setCurrentIndex(1)
+            capture(dialog, output / "View_Process_Exclusions.png")
+        dialog.close()
+
+
 def render(output, theme="light"):
     """Export the dashboard and every major tool with a deterministic theme and fixture data."""
     APP.theme.select(theme)
@@ -54,35 +89,7 @@ def render(output, theme="light"):
         window.timer.stop()
         capture(window, output / "Main_Page.png", 1120, 760)
         capture_details(window, output)
-        constructors = (
-            ("Live_Debugging.png", lambda: popups.LiveScanDialog(data, window.runner, window)),
-            ("Live_Top_Processes.png", lambda: popups.LiveScanDialog(data, window.runner, window, processes=True)),
-            ("Run_Analysis.png", lambda: popups.AnalysisDialog(data, window.runner, window)),
-            ("Manual_Analysis.png", lambda: popups.ManualAnalysisDialog(data, window.runner, window)),
-            ("Check_Engines.png", lambda: popups.EnginesDialog(data, window)),
-            ("Certificate_Viewer.png", lambda: popups.CertificatesDialog(window, certificates=read_certificate_file(
-                Path(__file__).parent / "fixtures" / "example_certificate.pem"))),
-            ("View_Exclusions.png", lambda: popups.ExclusionsDialog(data, window)),
-        )
-        for name, create in constructors:
-            dialog = create()
-            dialog.show()
-            APP.processEvents()
-            wait_until(lambda: not window.runner.busy)
-            if hasattr(dialog, "timer"):
-                dialog.timer.stop()
-            if hasattr(dialog, "source"):
-                dialog.source.setText(DISPLAY_PATH)
-            if name == "Live_Debugging.png":
-                dialog.running, dialog.started = True, True
-                popups.set_badge(dialog.status, "RUNNING", "good")
-                dialog.detail.setText(f"Collected {len(data.data)} file/process scan events.")
-                dialog.set_busy(False)
-            capture(dialog, output / name)
-            if isinstance(dialog, popups.ExclusionsDialog):
-                dialog.tabs.setCurrentIndex(1)
-                capture(dialog, output / "View_Process_Exclusions.png")
-            dialog.close()
+        capture_tools(window, data, output)
         results = {url: "Green" for url in endpoints_for_region("NAM")}
         with patch.object(popups, "check_endpoints", return_value=results):
             connectivity = popups.ConnectivityDialog(data, window.runner, window)

@@ -5,7 +5,7 @@ a = Analysis(
     ['main_page.py'],
     pathex=[],
     binaries=[],
-    datas=[('amp-icon.ico', '.')],
+    datas=[('amp-icon.ico', '.'), ('trusted_signers.json', '.'), ('exclusion_catalog.json', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

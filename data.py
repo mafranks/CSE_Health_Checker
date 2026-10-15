@@ -21,6 +21,11 @@ from string import Template
 from uuid import UUID
 from sfc_log import SfcLogReader, parse_scan_event
 from exclusions import read_policy_exclusions
+from connector_logging import (
+    ConnectorLogState, LOG_INFO, LOG_SOURCE_USER, logging_settings_from_root,
+    read_logging_settings, resolve_logging_state,
+)
+from recommendations import recommend_exclusions
 
 class PolicyLookupError(Exception):
     """Carry a policy API failure and its HTTP status for bounded fallback handling."""
@@ -43,6 +48,9 @@ class Data:
         self.root_path = "C:/Program Files/Cisco/AMP"
         self.configure_connector_paths()
         self.log_reader = SfcLogReader()
+        self.debug_error = ""
+        self.enabled_debug = False
+        self._debug_override = None
         self.reset_scan_data()
         self.converted_uptime = "Unknown"
         self.cpu_list = [(time.ctime(), self.get_cpu_usage())]
@@ -55,10 +63,16 @@ class Data:
         self.verify_api_creds()
         self.local_uuid = self.dig_thru_xml("agent", "uuid", root=self.get_root(os.path.join(self.root_path, "local.xml")), tag="")
         self.parse_xml(os.path.join(self.root_path, "policy.xml"))
-        self.finish_initialization()
+        self._logging_policy = logging_settings_from_root(self.policy_xml_root)
+        try:
+            self.debug_check()
+            self.finish_initialization()
+        except BaseException:
+            self.disable_debug()
+            raise
 
     def finish_initialization(self):
-        """Finish read-only connector metadata initialization."""
+        """Finish connector metadata initialization after configuring temporary logging."""
         self.local_uuid = self.dig_thru_xml("agent", "uuid", \
             root=self.get_root(os.path.join(self.root_path, "local.xml")), tag="")
         self.policy_color = 'Yellow'
@@ -208,6 +222,9 @@ class Data:
         analysis.sfc_path = os.fspath(path)
         analysis.log_reader = SfcLogReader()
         analysis.cpu_list = []
+        analysis.debug_error = ""
+        analysis.enabled_debug = False
+        analysis._debug_override = None
         analysis.reset_scan_data()
         analysis.update(include_partial=True)
         return analysis
@@ -216,6 +233,8 @@ class Data:
         """Explain missing data instead of claiming successful collection unconditionally."""
         if self.log_reader.error:
             return "LOG READ ERROR", self.log_reader.error
+        if not self.data and getattr(self, "debug_error", ""):
+            return "DEBUG UNAVAILABLE", self.debug_error
         if self.log_reader.empty:
             return "EMPTY LOG", "The selected connector log is empty."
         if not self.data:
@@ -225,6 +244,7 @@ class Data:
 
     def update(self, include_partial=False):
         """Sample CPU and consume each newly completed connector log line once."""
+        self.refresh_connector_logging()
         self.cpu_list.append((time.ctime(), self.get_cpu_usage()))
         self.current_cpu = self.cpu_list[-1][1]
         lines = self.log_reader.read_new_lines(self.sfc_path, include_partial=include_partial)
@@ -703,10 +723,131 @@ class Data:
                 logging.debug("Unable to inspect process: %s", error)
         raise RuntimeError("Ensure Secure Endpoint is installed and running and try again.")
 
-    @staticmethod
-    def get_connector_debug_text():
-        """Require a manual runtime check instead of inferring the connector's debug state."""
-        return "Unknown (check connector GUI)"
+    def recommend_exclusions(self):
+        """Match running software to public exclusion-set candidates without changing policy."""
+        processes = []
+        for process in psutil.process_iter():
+            try:
+                processes.append(process.name())
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return recommend_exclusions(processes, proxies=self.proxies)
+
+    def debug_check(self):
+        """Enable temporary debug only when policy and saved settings establish it is off."""
+        if self.enabled_debug:
+            return
+        self.debug_error = ""
+        self._debug_override = None
+        state = self.refresh_connector_logging(force=True)
+        if state.enabled:
+            logging.info("Existing connector debug logging is preserved (%s)", state.source)
+            return
+        if not state.may_enable:
+            self.debug_error = state.detail
+            logging.warning("Connector logging settings are preserved: %s", state.detail)
+            return
+        started_at = int(time.time())
+        if not self.run_debug_command("start"):
+            return
+        completed_at = int(time.time())
+        self.confirm_debug_override(started_at, completed_at)
+
+    def read_connector_logging(self):
+        """Combine current local settings, readable policy XML, and connector defaults."""
+        policy = dict(getattr(self, "_logging_policy", {}))
+        policy.setdefault("level", self.policy_dict.get("log_level"))
+        try:
+            local = read_logging_settings(os.path.join(self.root_path, "local.xml"))
+            defaults = self.optional_logging_settings("global.xml")
+            current_policy = self.optional_logging_settings("policy.xml")
+            policy.update({key: value for key, value in current_policy.items() if value is not None})
+            return resolve_logging_state(policy, local, defaults, time.time(),
+                                         started_at=getattr(self, "connector_started_at", None))
+        except (OSError, ET.ParseError) as error:
+            logging.debug("Unable to inspect connector logging configuration: %s", error)
+            return ConnectorLogState(None, "unknown", "Unable to read connector logging settings; check file access and the connector's debug control.")
+
+    def optional_logging_settings(self, filename):
+        """Read a policy/default file when present, keeping other read failures visible."""
+        if filename not in ("global.xml", "policy.xml"):
+            raise ValueError("Unsupported connector logging configuration file")
+        try:
+            return read_logging_settings(os.path.join(self.root_path, filename))
+        except FileNotFoundError:
+            return {}
+        except PermissionError:
+            if filename == "policy.xml":
+                return {}
+            raise
+
+    def refresh_connector_logging(self, force=False):
+        """Refresh inferred connector state at most once every five seconds during polling."""
+        now = time.monotonic()
+        state = getattr(self, "connector_logging", None)
+        if force or state is None or now - getattr(self, "_logging_checked_at", 0) >= 5:
+            self.connector_logging = self.read_connector_logging()
+            self._logging_checked_at = now
+            if self.connector_logging.enabled:
+                self.debug_error = ""
+        return self.connector_logging
+
+    def confirm_debug_override(self, started_at, completed_at):
+        """Claim cleanup ownership only for a fresh local override created during this command."""
+        for attempt in range(3):
+            state = self.refresh_connector_logging(force=True)
+            token = state.override
+            if token and token[:2] == (LOG_INFO, LOG_SOURCE_USER) and started_at <= token[2] <= completed_at:
+                self._debug_override = token
+                self.enabled_debug = True
+                logging.info("Health Checker temporary connector debug override verified")
+                return
+            if attempt < 2:
+                time.sleep(0.1)
+        self.debug_error = "The debug command completed, but its setting could not be verified; check the connector's debug control."
+        logging.warning(self.debug_error)
+
+    def get_connector_debug_text(self):
+        """Describe connector logging separately from the Health Checker's own log level."""
+        state = self.refresh_connector_logging()
+        label = "Unknown" if state.enabled is None else "Enabled" if state.enabled else "Disabled"
+        source = state.source
+        if self.enabled_debug and state.override == self._debug_override:
+            source = "Health Checker"
+        return f"{label} ({source})"
+
+    def run_debug_command(self, action):
+        """Verify the connector CLI succeeds before reporting a debug logging change."""
+        if action not in ("start", "stop"):
+            raise ValueError(f"Invalid debug logging action: {action}")
+        executable = os.path.join(self.path_prelude, "sfc.exe")
+        try:
+            subprocess.run([executable, '-l', action], check=True, timeout=15,
+                           capture_output=True,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.SubprocessError) as error:
+            self.debug_error = (f"Unable to {action} connector debug logging: {error}. "
+                                "Run the Health Checker as Administrator and check connector logging.")
+            logging.warning(self.debug_error)
+            return False
+        self.debug_error = ""
+        logging.info("Connector debug logging %s command completed successfully", action)
+        return True
+
+    def disable_debug(self):
+        """Clear only the verified override this tool created, preserving later external changes."""
+        if not self.enabled_debug:
+            return
+        state = self.refresh_connector_logging(force=True)
+        if state.override != self._debug_override or self._debug_override is None:
+            logging.info("Connector logging changed or could not be verified; current settings are preserved")
+            self.enabled_debug = False
+            self._debug_override = None
+            return
+        if self.run_debug_command("stop"):
+            self.enabled_debug = False
+            self._debug_override = None
+            self.refresh_connector_logging(force=True)
 
     def convert_uptime(self, uptime, granularity=4):
         '''

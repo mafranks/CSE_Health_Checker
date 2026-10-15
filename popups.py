@@ -9,6 +9,8 @@ from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLineEdit, QSizePolicy, QTabWidget, QVBoxLayout, QWidget
 
 from certificates import certificate_reports, load_certificates
+from recommendations import RecommendationReport, format_recommendations
+from trusted_signers import signer_reports
 from exclusions import EXCLUSION_TYPES, PROCESS_TYPES, configured_exclusions
 from connectivity import ConnectivitySettings, REGIONS, check_endpoints, endpoints_for_region, environment_settings, parse_proxy
 from gui import ResultDialog, button, fill_table, save_text, set_badge, table, text_label, text_view
@@ -532,6 +534,86 @@ class CertificatesDialog(ResultDialog):
         save_text(self, "\n\n".join(content for _, content in self.reports.values()))
 
 
+class TrustedSignersDialog(ResultDialog):
+    """Show the bundled publisher reference with separate date and unresolved-identity tabs."""
+
+    def __init__(self, parent=None, reference=None, as_of=None):
+        """Keep reference fingerprints available without a connector or certificate installation."""
+        super().__init__("Trusted signer reference", parent)
+        self.body.addWidget(text_label("Publisher certificate identities for reference. Date validity does not establish current trust or signer acceptance.", "muted"))
+        self.reports = signer_reports(reference, as_of)
+        self.tabs, self.views = QTabWidget(), {}
+        for title, (count, content) in self.reports.items():
+            view = text_view(content)
+            self.views[title] = view
+            self.tabs.addTab(view, f"{title} ({count})")
+        self.body.addWidget(self.tabs, 1)
+        self.save_button = button("Save all tabs…", self.save_results)
+        self.footer.insertWidget(0, self.save_button)
+        self.finish_layout()
+
+    def save_results(self):
+        """Export all verified variants and unresolved names with public publisher sources."""
+        save_text(self, "\n\n".join(content for _, content in self.reports.values()))
+
+
+class RecommendationsDialog(ResultDialog):
+    """Match running software to public exclusion-set candidates with explicit catalog freshness."""
+
+    def __init__(self, data, runner, parent=None):
+        """Run catalog refresh and process collection in the shared background queue."""
+        super().__init__("Recommend exclusions", parent)
+        self.data, self.runner, self.report = data, runner, None
+        self.body.addWidget(text_label("Review candidate Cisco-maintained exclusion sets for detected software in the Secure Endpoint console. No policy changes are applied.", "muted"))
+        self.status = text_label("Ready", "muted")
+        self.source = text_label("", "muted")
+        self.body.addWidget(self.status)
+        self.body.addWidget(self.source)
+        self.results = table(("Exclusion set", "Detected processes"))
+        self.results.setColumnWidth(0, 300)
+        self.body.addWidget(self.results, 1)
+        self.refresh_button = button("Refresh candidates", self.refresh)
+        self.save_button = button("Save results…", self.save_results)
+        self.footer.insertWidget(0, self.refresh_button)
+        self.footer.insertWidget(1, self.save_button)
+        self.runner.busy_changed.connect(self.set_busy)
+        self.set_busy(self.runner.busy)
+        self.finish_layout()
+        QTimer.singleShot(0, self.refresh)
+
+    def set_busy(self, busy):
+        """Prevent duplicate catalog requests and exporting incomplete results."""
+        self.refresh_button.setEnabled(not busy)
+        self.save_button.setEnabled(not busy and self.report is not None)
+
+    def refresh(self):
+        """Refresh once when idle, preserving existing results until new ones arrive."""
+        if not self.closed and self.runner.submit(self.data.recommend_exclusions, self.render_results, self.failure):
+            self.status.setText("Checking running software and the public catalog…")
+
+    def render_results(self, report):
+        """Display every match and show whether a dated offline catalog was used."""
+        if self.closed:
+            return
+        if not isinstance(report, RecommendationReport):
+            raise ValueError("Invalid exclusion recommendation report.")
+        self.report = report
+        fill_table(self.results, [(name, ", ".join(processes)) for name, processes in report.candidates.items()])
+        self.status.setText(report.note)
+        self.source.setText(f"Catalog updated: {report.updated_on} · Checked: {report.checked_on}\n{report.source}")
+        self.set_busy(self.runner.busy)
+
+    def failure(self, message):
+        """Show lookup failures in the dialog while retaining the last completed report."""
+        if not self.closed:
+            self.status.setText(message)
+
+    def save_results(self):
+        """Save all candidate sets and the catalog information used to produce them."""
+        if self.report is not None:
+            save_text(self, format_recommendations(self.report))
+
+
 class EnginesDialog(ResultDialog):
     """Show engine configuration as read-only status rows instead of editable checkboxes."""
 
@@ -571,7 +653,16 @@ class ExclusionsDialog(ResultDialog):
         self.body.addWidget(text_label("Configured rules from the loaded policy; runtime enforcement is not checked.", "muted"))
         self.save_button = button("Save all tabs…", self.save_results)
         self.footer.insertWidget(0, self.save_button)
+        self.wildcard_button = button("Check leading wildcards", self.wildcard_check)
+        self.footer.insertWidget(1, self.wildcard_button)
         self.finish_layout()
+
+    def wildcard_check(self):
+        """Report broad leading wildcard patterns using decoded wildcard rules only."""
+        matches = [record.value for record in self.records["general"] if "Wildcard" in record.types
+                   and record.value.startswith(("*", ".*", "^.*"))]
+        TextDialog("Leading wildcard exclusions", "Review broad leading wildcard exclusions for performance and matching scope.",
+                   "\n".join(matches) or "No leading wildcard exclusions were found.", self).exec()
 
     def add_exclusions_tab(self, title, key, types):
         """Give each read-only exclusion table its own type selector and result count."""

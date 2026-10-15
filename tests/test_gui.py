@@ -492,6 +492,55 @@ class QtGuiTests(unittest.TestCase):
         self.assertIn("Child processes", content)
         self.assertIn("Stored entry", content)
 
+    def test_leading_wildcard_button_only_reports_decoded_wildcard_rules(self):
+        """Restore the report without misclassifying threat names or ordinary paths."""
+        pattern = r"^.*\\Example\\Cache"
+        self.data.policy_dict["path_exclusions"] = ["256|6|0|0|" + pattern, "256|1|0|0|*ExampleThreat",
+                                                    r"256|2|1|0|C:\Example\Cache"]
+        dialog = popups.ExclusionsDialog(self.data, self.window)
+        self.addCleanup(dialog.close)
+        with patch.object(popups, "TextDialog") as report:
+            dialog.wildcard_button.click()
+        self.assertEqual(report.call_args.args[2], pattern)
+        report.return_value.exec.assert_called_once_with()
+
+    def test_trusted_signer_reference_is_standalone_and_exports_all_tabs(self):
+        """Keep built-in current, historical, and unresolved references available without a connector."""
+        self.window.data = None
+        self.window.set_busy(False)
+        self.assertTrue(self.window.action_buttons["signers"].isEnabled())
+        with patch.object(self.window, "show_dialog") as show:
+            self.window.action_buttons["signers"].click()
+        dialog = show.call_args.args[0]
+        self.addCleanup(dialog.close)
+        for title in ("Valid dates", "Historical", "Unverified"):
+            self.assertIn(title, dialog.views)
+            self.assertTrue(dialog.views[title].isReadOnly())
+        with patch.object(popups, "save_text") as save:
+            dialog.save_button.click()
+        for view in dialog.views.values():
+            self.assertIn(view.toPlainText(), save.call_args.args[1])
+
+    def test_recommendations_refresh_in_background_and_export_catalog_details(self):
+        """Show candidate sets with source age, allow refresh, and save complete results."""
+        dialog = popups.RecommendationsDialog(self.data, self.window.runner, self.window)
+        self.addCleanup(dialog.close)
+        dialog.show()
+        wait_until(lambda: dialog.report is not None and not self.window.runner.busy)
+        self.assertEqual(dialog.results.item(0, 0).text(), "Example product")
+        self.assertEqual(dialog.results.item(0, 1).text(), "example.exe")
+        self.assertIn("2024-10-30", dialog.source.text())
+        self.assertTrue(dialog.refresh_button.isEnabled())
+        self.assertTrue(dialog.save_button.isEnabled())
+        self.data.recommend_exclusions.assert_called_once_with()
+        with patch.object(popups, "save_text") as save:
+            dialog.save_button.click()
+        self.assertIn("Example product\texample.exe", save.call_args.args[1])
+        self.assertIn("Catalog updated: 2024-10-30", save.call_args.args[1])
+        dialog.refresh_button.click()
+        wait_until(lambda: not self.window.runner.busy)
+        self.assertEqual(self.data.recommend_exclusions.call_count, 2)
+
     def test_combined_process_exclusion_has_individual_child_scope_and_copying(self):
         """Display combined flags under each protection with its own child setting."""
         sha = "ab" * 32

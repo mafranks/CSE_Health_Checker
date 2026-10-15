@@ -20,6 +20,9 @@ Originally developed by Matthew Franks and Brandon Macer.
 - Full-screen tool windows, selectable results, clipboard copying, and complete text exports.
 - A standalone connectivity test that can run without a connector or API credentials.
 - A local certificate viewer with fingerprints and separate current, historical, and future validity categories.
+- A bundled trusted signer reference with publisher fingerprints, validity-date categories, and unresolved identities clearly separated.
+- Exclusion-set recommendations from running software, with catalog freshness and an explicit offline fallback.
+- Connector debug detection and temporary logging cleanup that preserves settings created outside the tool.
 
 ## Installation
 
@@ -27,7 +30,7 @@ Run the prebuilt [SE_Health_Checker.exe](SE_Health_Checker.exe) on Windows, or u
 
 The source GUI uses [PySide6 (Qt for Python)](https://doc.qt.io/qtforpython-6/gettingstarted.html). The project's runtime requirements target **64-bit Python 3.10–3.15**. Qt 6.12 supports **Windows 10 (1809 or later) and Windows 11**; see [Qt's Windows platform requirements](https://doc.qt.io/qt-6/windows.html). Install the versions selected by `requirements.txt`, which allows PySide6 6.x releases from 6.12 onward. No PySimpleGUI account or license key is required.
 
-Configure `.env` as described in [API Credentials](#api-credentials) before launching the connector tools. Connectivity Test and Certificate viewer can run without that configuration.
+Configure `.env` as described in [API Credentials](#api-credentials) before launching the connector tools. Connectivity test, Certificate viewer, and Trusted signers can run without that configuration.
 
 Start from a fresh checkout, create a local configuration file, then install and run the source:
 
@@ -40,7 +43,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe main_page.py
 ```
 
-Check `python --version` first so the environment uses the interpreter you intend to run. Enable connector debug through the Secure Endpoint GUI before collecting scan activity. Keep your `.env` file in the working directory.
+Check `python --version` first so the environment uses the interpreter you intend to run. The tool checks connector debug on startup and can enable temporary logging when the configuration establishes that it is off. Keep your `.env` file in the working directory.
 
 To build a Windows executable, run these commands **on Windows**:
 
@@ -196,11 +199,21 @@ The test reports reachability and does not verify the server certificate chain.
 
 Unrecognized entries remain visible as **Unknown**. Hover over a type to see the original entry and parsing details. **Save all tabs…** exports both complete lists, including decoded types, child-process scope, and original entries, even when a filter is active. The viewer reads configured rules; it does not establish runtime enforcement or the complete cloud configuration. Check IOC rules in the Secure Endpoint console.
 
+**Check leading wildcards** reports broad leading wildcard patterns from decoded Wildcard exclusions, including their stored regular-expression forms. It does not change the exclusions.
+
 The general and process list locations are also used by the [public upstream collector](https://github.com/CiscoSecurity/amp-05-health-checker-windows/blob/master/data.py). See Cisco’s public [exclusion guide](https://www.cisco.com/c/en/us/support/docs/security/amp-endpoints/213681-best-practices-for-amp-for-endpoint-excl.html) for exclusion behavior.
 
 ![Typed policy exclusions with a type filter](images/View_Exclusions.png)
 
 ![Process protection types and child-process scope in dark mode](images/View_Process_Exclusions_Dark.png)
+
+### Recommend exclusions
+
+**Recommend exclusions** matches running executable names to candidate Cisco-maintained exclusion sets. **Refresh candidates** retrieves the [public upstream catalog](https://github.com/CiscoSecurity/amp-05-health-checker-windows/blob/master/temp_maintained_exclusions.py) over HTTPS without API credentials. The catalog is parsed as data; downloaded code is not executed. If refresh fails, the tool explicitly uses the bundled reference dated **October 30, 2024**. Catalog freshness and source are shown in the dialog and included in exports.
+
+Review candidate sets and their current definitions in the Secure Endpoint console before applying them. The tool does not change policy or claim that an older catalog is current.
+
+![Exclusion-set candidates with catalog freshness and detected processes](images/Recommend_Exclusions.png)
 
 ### Generate Diagnostic
 
@@ -232,7 +245,15 @@ The **IPs** analysis tab ranks addresses extracted from the connector log. These
 
 ![Local certificate viewer with fingerprints and separate validity-date tabs](images/Certificate_Viewer.png)
 
-**Valid dates** contains certificates within their validity period; **Historical** contains expired certificates. **Not yet valid** appears when needed. **Save all tabs…** exports all categories. Date validity does not establish Windows trust, revocation status, or whether a signer is accepted by Secure Endpoint. The viewer ships with no signer catalog and does not change certificate stores. Files containing PEM private keys are rejected.
+**Valid dates** contains certificates within their validity period; **Historical** contains expired certificates. **Not yet valid** appears when needed. **Save all tabs…** exports all categories. Date validity does not establish Windows trust, revocation status, or whether a signer is accepted by Secure Endpoint. The viewer displays locally selected files and does not change certificate stores. Files containing PEM private keys are rejected.
+
+### Trusted signers
+
+**Trusted signers** opens a separate bundled reference containing the 19 requested signer names and 18 publisher-verified certificate variants. Publisher metadata was verified on **October 14, 2026**. Each verified variant includes its issuer, SHA-1 and SHA-256 fingerprints, exact UTC validity dates, and public publisher source. The **Valid dates**, **Historical**, and optional **Not yet valid** tabs are calculated when the reference opens. The **Unverified** tab retains names whose exact publisher certificate has not been identified; fingerprints are not guessed.
+
+This reference does not check installation, current Windows trust, revocation, or signer acceptance. It is separate from **Certificate viewer**, which continues to read certificate files selected locally. **Save all tabs…** exports the complete reference.
+
+![Trusted signer reference with separate current, historical, and unverified identities](images/Trusted_Signers.png)
 
 ### Manual SFC Analysis
 
@@ -244,9 +265,9 @@ The **IPs** analysis tab ranks addresses extracted from the connector log. These
 
 The Tool log level dropdown allows you to select the logging level for the SE Health Checker tool. It does not change the log level on the SE Connector! If you run into an issue with the Health Checker tool, please put the tool in DEBUG, reproduce the issue, and provide the SE diagnostic file and Health Checker logs for analysis.
 
-The main window shows **Connector debug** as **Unknown (check connector GUI)**. Confirm or enable runtime debug logging in Secure Endpoint before collecting scan activity. **Tool Log Level** controls only `amp_health_checker_log.log`.
+The main window shows connector debug state and its source, with further detail in the tooltip. Existing policy, local, remote, and crash-recovery logging settings are preserved. If the configuration establishes that debug is off, the tool requests temporary logging through the connector CLI and verifies its saved setting. On exit it clears only the verified override it created; later external changes and uncertain settings are preserved. Unreadable, unsupported, or expired settings appear as **Unknown** rather than triggering a logging change. CLI failures are reported.
 
-Manage connector debug through the Secure Endpoint GUI or Cisco’s [documented command-line interface](https://www.cisco.com/c/en/us/support/docs/security/amp-endpoints/213690-amp-for-endpoint-command-line-switches.html). The checker reads connector configuration and logs without automatically changing connector debug settings.
+You can also manage connector debug through the Secure Endpoint GUI or Cisco’s [documented command-line interface](https://www.cisco.com/c/en/us/support/docs/security/amp-endpoints/213690-amp-for-endpoint-command-line-switches.html). **Tool Log Level** controls only `amp_health_checker_log.log`; selecting INFO, WARNING, or DEBUG there does not change connector logging. The tool does not directly edit connector configuration files.
 
 The live and analysis windows display the selected `sfc.exe.log` path. `RUNNING` means file/process scan records have been collected. `WAITING FOR SCAN EVENTS`, `EMPTY LOG`, and `LOG READ ERROR` explain why results are missing. The tool prefers the running connector's directory; if process inspection is unavailable, it logs a warning and uses the latest valid installation.
 
@@ -262,7 +283,7 @@ Run the regression suite from the repository directory:
 python -m unittest discover -s tests -v
 ```
 
-Install `requirements.txt` first. The tests use real Qt widgets with an offscreen platform, temporary logs/settings, and stub Windows/API services, so they can run without a connector, API credentials, or a visible desktop. They cover light/dark themes, saved appearance, stored exclusion entries, layout resizing, background work, exports, manual snapshots, live pause/resume, policy failures, and shutdown while operations are active. Validate the actual GUI and connector diagnostic tools on Windows before distributing a rebuilt executable.
+Install `requirements.txt` first. The tests use real Qt widgets with an offscreen platform, temporary logs/settings, and stub Windows/API services, so they can run without a connector, API credentials, or a visible desktop. They cover light/dark themes, saved appearance, typed exclusions and leading wildcards, public catalog refresh and fallback, signer fingerprints and dates, connector debug ownership, layout resizing, background work, exports, manual snapshots, live pause/resume, policy failures, and shutdown while operations are active. Validate the actual GUI and connector diagnostic tools on Windows before distributing a rebuilt executable.
 
 Regenerate illustrative screenshots with the following commands. The renderer uses synthetic data and mocked services; it does not connect to a live endpoint or cloud account.
 

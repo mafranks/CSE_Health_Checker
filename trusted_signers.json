@@ -1,0 +1,281 @@
+{
+  "verified_on": "2026-10-14",
+  "entries": [
+    {
+      "name": "VeriSign Class 3 Code Signing",
+      "status": "unverified",
+      "variants": [],
+      "reason": "Incomplete name: publisher certificates include year and CA suffixes; the intended certificate is not established."
+    },
+    {
+      "name": "Microsoft Code Signing PCA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Code Signing PCA",
+          "issuer_name": "CN=Microsoft Root Certificate Authority,DC=microsoft,DC=com",
+          "sha1": "3CAF9BA2DB5570CAF76942FF99101B993888E257",
+          "sha256": "9CBF22FAE0DD53A7395556CE6154AA14A0D03360AA8C51CFEA05D1FD8819E043",
+          "valid_from": "2010-08-31T22:19:32+00:00",
+          "valid_to": "2020-08-31T22:29:32+00:00",
+          "source": "https://www.microsoft.com/pki/certs/MicCodSigPCA_08-31-2010.crt"
+        },
+        {
+          "subject_name": "Microsoft Code Signing PCA",
+          "issuer_name": "CN=Microsoft Root Authority,OU=Microsoft Corporation,OU=Copyright (c) 1997 Microsoft Corp.",
+          "sha1": "3036E3B25B88A55B86FC90E6E9EAAD5081445166",
+          "sha256": "DBD5BD417B78886EDC1574F5E872F3E1C0B07522B6881B95B6DD872AEDBEB30D",
+          "valid_from": "2007-08-22T22:31:02+00:00",
+          "valid_to": "2012-08-25T07:00:00+00:00",
+          "source": "https://www.microsoft.com/pki/certs/CSPCA.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft Code Signing PCA 2011",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Code Signing PCA 2011",
+          "issuer_name": "CN=Microsoft Root Certificate Authority 2011,O=Microsoft Corporation,L=Redmond,ST=Washington,C=US",
+          "sha1": "F252E794FE438E35ACE6E53762C0A234A2C52135",
+          "sha256": "56DA8722AFD94066FFE1E4595473A4854892B843A0827D53FB7D8F4AEED1E18B",
+          "valid_from": "2011-07-08T20:59:09+00:00",
+          "valid_to": "2026-07-08T21:09:09+00:00",
+          "source": "https://www.microsoft.com/pkiops/certs/MicCodSigPCA2011_2011-07-08.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft Windows Verification PCA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Windows Verification PCA",
+          "issuer_name": "CN=Microsoft Root Certificate Authority,DC=microsoft,DC=com",
+          "sha1": "5DF0D7571B0780783960C68B78571FFD7EDAF021",
+          "sha256": "CEAEBBF07A70DB33C5B5F7E7B8560CEBA3CFE9A3676A392FE447407B2FE9C5EB",
+          "valid_from": "2005-09-15T21:55:41+00:00",
+          "valid_to": "2016-03-15T22:05:41+00:00",
+          "source": "https://www.microsoft.com/pki/certs/MicrosoftWinPCA.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft Windows Verification Intermediate PCA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Windows Verification Intermediate PCA",
+          "issuer_name": "CN=Microsoft Root Authority,OU=Microsoft Corporation,OU=Copyright (c) 1997 Microsoft Corp.",
+          "sha1": "1C3245CA9517DDD6C95880F292DD85E2671CAE9E",
+          "sha256": "8D31EFF25470C9E98E831ECDF9DBABE0EB70D286D5D2DB7F67D360DB48541F19",
+          "valid_from": "2005-10-11T21:55:20+00:00",
+          "valid_to": "2010-04-26T07:00:00+00:00",
+          "source": "https://www.microsoft.com/pki/certs/MicrosoftWinIntPCA.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft Windows Hardware Compatibility PCA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Windows Hardware Compatibility PCA",
+          "issuer_name": "CN=Microsoft Root Certificate Authority,DC=microsoft,DC=com",
+          "sha1": "8D42419D8B21E5CF9C3204D0060B19312B96EB78",
+          "sha256": "C255DD781DEF59DB1C3E67BC0E02F1B1C74C32B91A4ED43086F28CE26E5C88CA",
+          "valid_from": "2012-06-04T21:05:46+00:00",
+          "valid_to": "2020-06-04T21:15:46+00:00",
+          "source": "https://www.microsoft.com/pki/certs/Microsoft%20Windows%20Hardware%20Compatibility%20PCA(1).crt"
+        }
+      ]
+    },
+    {
+      "name": "Symantec Class 3 SHA256 Code Signing CA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Symantec Class 3 SHA256 Code Signing CA",
+          "issuer_name": "CN=VeriSign Class 3 Public Primary Certification Authority - G5,OU=(c) 2006 VeriSign\\, Inc. - For authorized use only,OU=VeriSign Trust Network,O=VeriSign\\, Inc.,C=US",
+          "sha1": "007790F6561DAD89B0BCD85585762495E358F8A5",
+          "sha256": "582DC1D97A790EF04FE2567B1EC88C26B03BF6E99937CAE6A0B50397AD20BBF8",
+          "valid_from": "2013-12-10T00:00:00+00:00",
+          "valid_to": "2023-12-09T23:59:59+00:00",
+          "source": "https://cacerts.digicert.com/SymantecClass3SHA256CodeSigningCA.crt"
+        }
+      ]
+    },
+    {
+      "name": "Symantec Class 3 Extended Validation Code Signing CA - G2",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Symantec Class 3 Extended Validation Code Signing CA - G2",
+          "issuer_name": "CN=VeriSign Class 3 Public Primary Certification Authority - G5,OU=(c) 2006 VeriSign\\, Inc. - For authorized use only,OU=VeriSign Trust Network,O=VeriSign\\, Inc.,C=US",
+          "sha1": "5B8F88C80A73D35F76CD412A9E74E916594DFA67",
+          "sha256": "F726C8891336B1B97CBC86F596F1267FC180152122573E76D5145A7C64E2CFF7",
+          "valid_from": "2014-03-04T00:00:00+00:00",
+          "valid_to": "2024-03-03T23:59:59+00:00",
+          "source": "https://cacerts.digicert.com/SymantecClass3ExtendedValidationCodeSigningCA-G2.crt"
+        }
+      ]
+    },
+    {
+      "name": "DigiCert SHA2 Assured ID Code Signing CA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "DigiCert SHA2 Assured ID Code Signing CA",
+          "issuer_name": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+          "sha1": "92C1588E85AF2201CE7915E8538B492F605B80C6",
+          "sha256": "51044706BD237B91B89B781337E6D62656C69F0FCFFBE8E43741367948127862",
+          "valid_from": "2013-10-22T12:00:00+00:00",
+          "valid_to": "2028-10-22T12:00:00+00:00",
+          "source": "https://cacerts.digicert.com/DigiCertSHA2AssuredIDCodeSigningCA.crt"
+        }
+      ]
+    },
+    {
+      "name": "VeriSign Class 3 Code Signing 2010 CA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "VeriSign Class 3 Code Signing 2010 CA",
+          "issuer_name": "CN=VeriSign Class 3 Public Primary Certification Authority - G5,OU=(c) 2006 VeriSign\\, Inc. - For authorized use only,OU=VeriSign Trust Network,O=VeriSign\\, Inc.,C=US",
+          "sha1": "495847A93187CFB8C71F840CB7B41497AD95C64F",
+          "sha256": "0CFC19DB681B014BFE3F23CB3A78B67208B4E3D8D7B6A7B1807F7CD6ECB2A54E",
+          "valid_from": "2010-02-08T00:00:00+00:00",
+          "valid_to": "2020-02-07T23:59:59+00:00",
+          "source": "http://csc3-2010-aia.verisign.com/CSC3-2010.cer"
+        }
+      ]
+    },
+    {
+      "name": "DigiCert EV Code Signing CA (SHA2)",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "DigiCert EV Code Signing CA (SHA2)",
+          "issuer_name": "CN=DigiCert High Assurance EV Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+          "sha1": "60EE3FC53D4BDFD1697AE5BEAE1CAB1C0F3AD4E3",
+          "sha256": "C7460B0EDDA1B44C8E2164B234EBECC3962A6A37A936B74A6E7D46682938F084",
+          "valid_from": "2012-04-18T12:00:00+00:00",
+          "valid_to": "2027-04-18T12:00:00+00:00",
+          "source": "https://cacerts.digicert.com/DigiCertEVCodeSigningCA-SHA2.crt"
+        }
+      ]
+    },
+    {
+      "name": "DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1",
+          "issuer_name": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+          "sha1": "7B0F360B775F76C94A12CA48445AA2D2A875701C",
+          "sha256": "46011EDE1C147EB2BC731A539B7C047B7EE93E48B9D3C3BA710CE132BBDFAC6B",
+          "valid_from": "2021-04-29T00:00:00+00:00",
+          "valid_to": "2036-04-28T23:59:59+00:00",
+          "source": "https://cacerts.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crt"
+        }
+      ]
+    },
+    {
+      "name": "Sectigo RSA Code Signing CA",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Sectigo RSA Code Signing CA",
+          "issuer_name": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+          "sha1": "94C95DA1E850BD85209A4A2AF3E1FB1604F9BB66",
+          "sha256": "5051BD69E19D6CD036147949AC5BBCF99834561F119F60DC7938248D61C77BBD",
+          "valid_from": "2018-11-02T00:00:00+00:00",
+          "valid_to": "2030-12-31T23:59:59+00:00",
+          "source": "http://crt.sectigo.com/SectigoRSACodeSigningCA.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft Windows Production PCA 2011",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Windows Production PCA 2011",
+          "issuer_name": "CN=Microsoft Root Certificate Authority 2010,O=Microsoft Corporation,L=Redmond,ST=Washington,C=US",
+          "sha1": "580A6F4CC4E4B669B9EBDC1B2B3E087B80D0678D",
+          "sha256": "E8E95F0733A55E8BAD7BE0A1413EE23C51FCEA64B3C8FA6A786935FDDCC71961",
+          "valid_from": "2011-10-19T18:41:42+00:00",
+          "valid_to": "2026-10-19T18:51:42+00:00",
+          "source": "https://www.microsoft.com/pkiops/certs/MicWinProPCA2011_2011-10-19.crt"
+        }
+      ]
+    },
+    {
+      "name": "NET Foundation Projects Code Signing CA2",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": ".NET Foundation Projects Code Signing CA2",
+          "issuer_name": "CN=DigiCert CS RSA4096 Root G5,O=DigiCert\\, Inc.,C=US",
+          "sha1": "9170E881F14FC075B8CF999402FE3D12282555AF",
+          "sha256": "D60D2D02F83920E89C0063AECA7C4630642C80EB824FFE43D9A11C250E5F51B9",
+          "valid_from": "2021-07-15T00:00:00+00:00",
+          "valid_to": "2031-07-14T23:59:59+00:00",
+          "source": "https://cacerts.digicert.com/NETFoundationProjectsCodeSigningCA2.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft ID Verified Code Signing PCA 2021",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft ID Verified Code Signing PCA 2021",
+          "issuer_name": "CN=Microsoft Identity Verification Root Certificate Authority 2020,O=Microsoft Corporation,C=US",
+          "sha1": "8E750F459DAF9A79D6370DB747AD2226866AD818",
+          "sha256": "3D29798CC5D3F0644A7E0DC9CB1CADE523EA5EC83B335109B605BFEAA7D5F5C1",
+          "valid_from": "2021-04-01T20:05:20+00:00",
+          "valid_to": "2036-04-01T20:15:20+00:00",
+          "source": "https://www.microsoft.com/pkiops/certs/Microsoft%20ID%20Verified%20Code%20Signing%20PCA%202021.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft Windows Code Signing PCA 2023",
+      "status": "unverified",
+      "variants": [],
+      "reason": "No exact publisher certificate identified. Windows Production PCA 2023 exists but is a different name and has not been substituted."
+    },
+    {
+      "name": "Microsoft Windows Code Signing PCA 2024",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Windows Code Signing PCA 2024",
+          "issuer_name": "CN=Microsoft Root Certificate Authority 2010,O=Microsoft Corporation,L=Redmond,ST=Washington,C=US",
+          "sha1": "D30F05F637E605239C0070D1EA9860D434AC2A94",
+          "sha256": "FE229EFC927F6D77B738896752A21803A59736BAA17BF5BE9A50C72E219CBCD2",
+          "valid_from": "2024-08-08T21:36:23+00:00",
+          "valid_to": "2035-06-23T22:04:01+00:00",
+          "source": "https://www.microsoft.com/pkiops/certs/Microsoft%20Windows%20Code%20Signing%20PCA%202024.crt"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft Windows Production PCA 2026",
+      "status": "verified",
+      "variants": [
+        {
+          "subject_name": "Microsoft Windows Production PCA 2026 RSA2048-SHA256",
+          "issuer_name": "CN=Microsoft Root Certificate Authority 2010,O=Microsoft Corporation,L=Redmond,ST=Washington,C=US",
+          "sha1": "5729E4C3DD4DB546929CA8760097E5FA49896AB5",
+          "sha256": "3727F477EFF0FDE6C1707EAEC91575888CCD9F429F9810E44DB39552C8C7E78D",
+          "valid_from": "2026-08-04T19:39:15+00:00",
+          "valid_to": "2031-08-04T19:49:15+00:00",
+          "source": "https://www.microsoft.com/pkiops/certs/Microsoft%20Windows%20Production%20PCA%202026%20RSA2048-SHA256.crt"
+        }
+      ]
+    }
+  ]
+}

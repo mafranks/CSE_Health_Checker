@@ -27,6 +27,7 @@ ACTIONS = (
     ("Connectivity test", "connectivity"), ("Engine status", "engines"),
     ("Certificate viewer", "certificates"), ("Generate diagnostic", "diagnostic"),
     ("View exclusions", "exclusions"),
+    ("Trusted signers", "signers"), ("Recommend exclusions", "recommendations"),
 )
 
 
@@ -266,7 +267,7 @@ class MainWindow(QMainWindow):
         self.fields["version"].setText("Unavailable")
         set_badge(self.setup_notice, message, "warning")
         self.setup_notice.show()
-        self.statusBar().showMessage("Connector unavailable · Connectivity Test and Certificate viewer available · Refresh to retry")
+        self.statusBar().showMessage("Connector unavailable · Standalone tools available · Refresh to retry")
 
     def set_busy(self, busy):
         """Disable overlapping actions while keeping window movement and close responsive."""
@@ -274,7 +275,7 @@ class MainWindow(QMainWindow):
         idle = not busy and not self.closing
         self.actions.setEnabled(idle)
         for key, control in self.action_buttons.items():
-            control.setEnabled(idle if key in ("connectivity", "certificates") else ready)
+            control.setEnabled(idle if key in ("connectivity", "certificates", "signers") else ready)
         for control in self.check_buttons.values():
             control.setEnabled(ready)
         self.refresh_button.setEnabled(not busy and not self.closing)
@@ -291,7 +292,7 @@ class MainWindow(QMainWindow):
                   "uuid": data.local_uuid}
         for key, value in values.items():
             self.fields[key].setText(str(value))
-        self.fields["debug"].setToolTip("Confirm debug logging in the Secure Endpoint GUI before collecting scan activity.")
+        self.fields["debug"].setToolTip(data.connector_logging.detail)
         set_badge(self.fields["api"], "Valid" if data.api_cred_valid else "Invalid", "good" if data.api_cred_valid else "warning")
         set_badge(self.fields["tetra"], data.tetra_version_display, tone_for_color(getattr(data, "tetra_color", None)))
         set_badge(self.fields["policy"], data.policy_dict.get("policy_sn", "Unknown"), tone_for_color(getattr(data, "policy_color", None)))
@@ -352,7 +353,7 @@ class MainWindow(QMainWindow):
 
     def handle_action(self, key):
         """Open all existing tools using Qt dialogs and serialize slower diagnostic commands."""
-        if self.runner.busy or self.closing or (self.data is None and key not in ("connectivity", "certificates")):
+        if self.runner.busy or self.closing or (self.data is None and key not in ("connectivity", "certificates", "signers")):
             return
         constructors = {"live": partial(popups.LiveScanDialog, self.data, self.runner, self),
                         "processes": partial(popups.LiveScanDialog, self.data, self.runner, self, processes=True),
@@ -360,7 +361,9 @@ class MainWindow(QMainWindow):
                         "manual": partial(popups.ManualAnalysisDialog, self.data, self.runner, self),
                         "connectivity": partial(popups.ConnectivityDialog, self.data, self.runner, self),
                         "engines": partial(popups.EnginesDialog, self.data, self),
-                        "exclusions": partial(popups.ExclusionsDialog, self.data, self)}
+                        "exclusions": partial(popups.ExclusionsDialog, self.data, self),
+                        "signers": partial(popups.TrustedSignersDialog, self),
+                        "recommendations": partial(popups.RecommendationsDialog, self.data, self.runner, self)}
         if key in constructors:
             self.show_dialog(constructors[key]())
         elif key == "certificates":
@@ -396,10 +399,29 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Health Checker", message)
 
     def shutdown(self):
-        """Close only after the current background operation has completed."""
-        if not self.runner.busy and not self.can_close:
-            self.can_close = True
-            self.close()
+        """Wait for active work, then clean up only the tool's verified debug override."""
+        if self.runner.busy or self.can_close:
+            return
+        if self.data is None:
+            self.cleanup_done()
+        else:
+            self.runner.submit(self.cleanup_connector, self.cleanup_done, self.cleanup_failed)
+
+    def cleanup_connector(self):
+        """Surface CLI cleanup failures that the backend records without raising."""
+        self.data.disable_debug()
+        if self.data.enabled_debug:
+            raise RuntimeError(self.data.debug_error or "Unable to restore the temporary connector debug setting.")
+
+    def cleanup_done(self, result=None):
+        """Allow the window to close after connector cleanup has completed."""
+        self.can_close = True
+        self.close()
+
+    def cleanup_failed(self, message):
+        """Report a failed cleanup explicitly before finishing application shutdown."""
+        QMessageBox.warning(self, "Connector cleanup", message)
+        self.cleanup_done()
 
     def closeEvent(self, event):
         """Defer shutdown until in-flight work completes."""
@@ -409,7 +431,7 @@ class MainWindow(QMainWindow):
         event.ignore()
         self.closing = True
         self.timer.stop()
-        self.statusBar().showMessage("Finishing current operation…")
+        self.statusBar().showMessage("Finishing current operation and restoring temporary debug settings…")
         self.set_busy(self.runner.busy)
 
 
