@@ -38,8 +38,11 @@ def sample_data(directory):
     data.get_cpu_usage = Mock(return_value=0.4)
     data.policy_dict = {"tetra": "1", "spero": "1", "ethos": "1", "orbital": "0", "DFC": "1", "spp": "1",
                         "exprev_enable": "1", "endpoint_isolation": "1", "device_control": "0", "host_firewall": "disabled",
-                        "path_exclusions": ["Example policy entry for local review"],
-                        "process_exclusions": [r"3|0||C:\Example\sample.exe|48|"]}
+                        "path_exclusions": ["256|3|0|0|.example", r"256|2|1|0|C:\Example\Cache",
+                                            r"256|6|0|0|^C:\\Example\\.*\\cache"],
+                        "process_exclusions": [r"2|0||C:\Example\worker.exe|1|", r"3|0||C:\Example\service.exe|4|",
+                                               r"3|0||C:\Example\sample.exe|48|", r"3|0||C:\Example\monitor.exe|256|"],
+                        "executable_exclusions": [("example.exe", "v8")]}
     data.log_reader = SfcLogReader()
     data.reset_scan_data()
     populate_test_dashboard_metadata(data)

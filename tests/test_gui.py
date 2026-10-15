@@ -446,22 +446,72 @@ class QtGuiTests(unittest.TestCase):
         self.assertTrue(report.results.isReadOnly())
 
     def test_exclusions_preserve_complete_stored_entries_and_export_both_tabs(self):
-        """Copy raw entries without asserting undocumented type or child-process mappings."""
+        """Keep unrecognized entries visible while exporting decoded and original values."""
         entries = ["Example policy entry", "", None]
         self.data.policy_dict["path_exclusions"] = entries
         dialog = popups.ExclusionsDialog(self.data, self.window)
         self.addCleanup(dialog.close)
         for theme in ("light", "dark"):
             APP.theme.select(theme)
-            self.assertEqual(dialog.views["general"].rowCount(), 3)
-            self.assertEqual(dialog.views["general"].item(0, 0).text(), entries[0])
-            self.assertEqual(dialog.views["general"].item(1, 0).text(), "(empty entry)")
+            self.assertEqual(dialog.views["general"].rowCount(), 4)
+            self.assertEqual(dialog.views["general"].item(0, 0).text(), "Unknown")
+            self.assertEqual(dialog.views["general"].item(0, 1).text(), entries[0])
+            self.assertEqual(dialog.views["general"].item(1, 1).text(), "(empty entry)")
         process = self.data.policy_dict["process_exclusions"][0]
-        self.assertEqual(dialog.views["process"].item(0, 0).text(), process)
+        self.assertEqual(dialog.views["process"].item(0, 0).text(), "File Scan")
+        self.assertEqual(dialog.views["process"].item(0, 1).text(), r"C:\Example\worker.exe")
+        self.assertEqual(dialog.views["process"].item(0, 3).text(), "Yes")
         with patch.object(popups, "save_text") as save:
             dialog.save_button.click()
         self.assertIn(process, save.call_args.args[1])
         self.assertIn(entries[0], save.call_args.args[1])
+
+    def test_exclusion_type_filters_and_complete_export_in_both_themes(self):
+        """Filter each tab independently and export every rule despite an active filter."""
+        dialog = popups.ExclusionsDialog(self.data, self.window)
+        self.addCleanup(dialog.close)
+        for theme in ("light", "dark"):
+            APP.theme.select(theme)
+            for key, kinds in (("general", ("File Extension", "Path", "Wildcard", "Executable")),
+                               ("process", ("File Scan", "System Process Protection", "Malicious Activity Protection", "Behavioral Protection"))):
+                for kind in kinds:
+                    with self.subTest(theme=theme, tab=key, kind=kind):
+                        dialog.filters[key].setCurrentText(kind)
+                        self.assertEqual(dialog.views[key].rowCount(), 1)
+                        self.assertEqual(dialog.views[key].item(0, 0).text(), kind)
+                        self.assertIn("Showing 1 of 4", dialog.messages[key].text())
+            dialog.filters["general"].setCurrentText("IOC")
+            self.assertEqual(dialog.views["general"].rowCount(), 0)
+            self.assertIn("unavailable", dialog.messages["general"].text())
+        with patch.object(popups, "save_text") as save:
+            dialog.save_button.click()
+        content = save.call_args.args[1]
+        for kind in ("File Extension", "Path", "Wildcard", "Executable", "File Scan", "System Process Protection",
+                     "Malicious Activity Protection", "Behavioral Protection"):
+            self.assertIn(kind, content)
+        self.assertIn("Child processes", content)
+        self.assertIn("Stored entry", content)
+
+    def test_combined_process_exclusion_has_individual_child_scope_and_copying(self):
+        """Display combined flags under each protection with its own child setting."""
+        sha = "ab" * 32
+        raw = fr"3|1|{sha}|C:\Example\app.exe|52|"
+        self.data.policy_dict["process_exclusions"] = [raw]
+        dialog = popups.ExclusionsDialog(self.data, self.window)
+        self.addCleanup(dialog.close)
+        view = dialog.views["process"]
+        self.assertEqual(view.rowCount(), 2)
+        for kind, children in (("Malicious Activity Protection", "Yes"), ("System Process Protection", "No")):
+            dialog.filters["process"].setCurrentText(kind)
+            self.assertEqual(view.rowCount(), 1)
+            self.assertEqual(view.item(0, 0).text(), kind)
+            self.assertEqual(view.item(0, 1).text(), r"C:\Example\app.exe")
+            self.assertEqual(view.item(0, 2).text(), sha)
+            self.assertEqual(view.item(0, 3).text(), children)
+            self.assertIn(raw, view.item(0, 0).toolTip())
+            view.selectRow(0)
+            view.copy_selection()
+            self.assertEqual(APP.clipboard().text(), f"{kind}\tC:\\Example\\app.exe\t{sha}\t{children}")
 
     def test_unlock_value_does_not_repeat_its_field_label(self):
         """Keep the backend's legacy unlock-code prefix out of the aligned value column."""

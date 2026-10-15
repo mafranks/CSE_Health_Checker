@@ -6,10 +6,10 @@ import threading
 import webbrowser
 
 from PySide6.QtCore import QTimer, Signal
-from PySide6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLineEdit, QSizePolicy, QTabWidget
+from PySide6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLineEdit, QSizePolicy, QTabWidget, QVBoxLayout, QWidget
 
 from certificates import certificate_reports, load_certificates
-from exclusions import policy_exclusion_entries
+from exclusions import EXCLUSION_TYPES, PROCESS_TYPES, configured_exclusions
 from connectivity import ConnectivitySettings, REGIONS, check_endpoints, endpoints_for_region, environment_settings, parse_proxy
 from gui import ResultDialog, button, fill_table, save_text, set_badge, table, text_label, text_view
 
@@ -556,31 +556,83 @@ class EnginesDialog(ResultDialog):
 
 
 class ExclusionsDialog(ResultDialog):
-    """Show complete local policy entries without inferring undocumented type or scope fields."""
+    """Show typed exclusions and per-engine process scope with filters and full exports."""
 
     def __init__(self, data, parent=None):
-        """Keep general and process entries in read-only tabs with full text export."""
+        """Decode the loaded policy into separate file and process exclusion tables."""
         super().__init__("Policy exclusions", parent)
-        self.body.addWidget(text_label(
-            "Stored entries from the loaded policy. Confirm exclusion types and child-process scope "
-            "in the Secure Endpoint console. This view does not establish the complete cloud configuration.", "muted"))
-        self.entries = policy_exclusion_entries(data.policy_dict)
+        general, processes = configured_exclusions(data.policy_dict)
+        self.records = {"general": general, "process": processes}
         self.tabs = QTabWidget()
-        self.views = {}
-        for title, key in (("Exclusions", "general"), ("Process exclusions", "process")):
-            view = table(("Stored policy entry",))
-            fill_table(view, [(entry,) for entry in self.entries[key]])
-            self.views[key] = view
-            self.tabs.addTab(view, f"{title} ({len(self.entries[key])})")
+        self.views, self.filters, self.messages = {}, {}, {}
+        self.add_exclusions_tab("Exclusions", "general", EXCLUSION_TYPES)
+        self.add_exclusions_tab("Process exclusions", "process", PROCESS_TYPES)
         self.body.addWidget(self.tabs, 1)
+        self.body.addWidget(text_label("Configured rules from the loaded policy; runtime enforcement is not checked.", "muted"))
         self.save_button = button("Save all tabs…", self.save_results)
         self.footer.insertWidget(0, self.save_button)
         self.finish_layout()
 
+    def add_exclusions_tab(self, title, key, types):
+        """Give each read-only exclusion table its own type selector and result count."""
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        controls = QHBoxLayout()
+        controls.addWidget(text_label("Type", "muted", wrap=False))
+        selector = QComboBox()
+        selector.addItems(("All types", *types))
+        controls.addWidget(selector)
+        controls.addStretch()
+        layout.addLayout(controls)
+        message = text_label("", "muted")
+        layout.addWidget(message)
+        headers = ("Type", "Process path", "SHA-256", "Child processes") if key == "process" else ("Type", "Value", "Details")
+        view = table(headers)
+        view.setColumnWidth(0, 230 if key == "process" else 140)
+        view.setColumnWidth(1, 320)
+        if key == "process":
+            view.setColumnWidth(2, 220)
+        layout.addWidget(view, 1)
+        self.filters[key], self.views[key], self.messages[key] = selector, view, message
+        selector.currentTextChanged.connect(partial(self.filter_exclusions, key))
+        self.tabs.addTab(panel, f"{title} ({len(self.records[key])})")
+        self.filter_exclusions(key)
+
+    def exclusion_rows(self, key, records):
+        """Format decoded values consistently for display, copying, and text exports."""
+        if key == "process":
+            return [(" / ".join(record.types), record.value or "—", record.sha256 or "—", record.children or "—")
+                    for record in records]
+        return [(" / ".join(record.types), record.value, record.details) for record in records]
+
+    def filter_exclusions(self, key, selected=None):
+        """Filter by decoded type without discarding unknown entries or the original encoding."""
+        selected = self.filters[key].currentText()
+        records = self.records[key]
+        visible = [record for record in records if selected == "All types" or selected in record.types]
+        view = self.views[key]
+        fill_table(view, self.exclusion_rows(key, visible))
+        for row, record in enumerate(visible):
+            detail = "\n".join(value for value in (record.raw, record.details) if value)
+            view.item(row, 0).setToolTip(detail)
+        message = f"Showing {len(visible)} of {len(records)} configured rules."
+        if key == "general" and selected == "IOC":
+            message = "IOC rules are unavailable in these local lists. Check the Secure Endpoint console."
+        self.messages[key].setText(message)
+
     def save_results(self):
-        """Export both lists exactly as displayed, including empty or unrecognized entries."""
-        sections = [title + "\n" + "\n".join(self.entries[key])
-                    for title, key in (("Exclusions", "general"), ("Process exclusions", "process"))]
+        """Export both complete lists with decoded columns, details, and original entries."""
+        sections = []
+        for title, key in (("Exclusions", "general"), ("Process exclusions", "process")):
+            view = self.views[key]
+            headers = [view.horizontalHeaderItem(i).text() for i in range(view.columnCount())]
+            if key == "process":
+                headers.append("Details")
+            lines = [title, "\t".join([*headers, "Stored entry"])]
+            for values, record in zip(self.exclusion_rows(key, self.records[key]), self.records[key]):
+                fields = (*values, record.details) if key == "process" else values
+                lines.append("\t".join((*fields, record.raw)))
+            sections.append("\n".join(lines))
         save_text(self, "\n\n".join(sections))
 
 

@@ -192,13 +192,15 @@ The test reports reachability and does not verify the server certificate chain.
 
 ### View Exclusions
 
-**View exclusions** shows the general and process lists read from the loaded policy. Both tabs preserve complete stored entries, including unrecognized values, and **Save all tabs…** exports both lists. Confirm rule types, executable exclusions, and child-process scope in the Secure Endpoint console.
+**View exclusions** shows decoded types and values in separate **Exclusions** and **Process exclusions** tabs. Each tab has a **Type** filter and a result count. The Exclusions tab identifies paths, file extensions, wildcards, threat names, file names, and Exploit Prevention executable exclusions. The Process exclusions tab shows the protection type, process path, SHA-256 when configured, and whether child processes are included. Combined process rules appear once per protection so each child-process setting stays distinct.
 
-The local list locations are also used by the [public upstream collector](https://github.com/CiscoSecurity/amp-05-health-checker-windows/blob/master/data.py). See Cisco’s public [exclusion guide](https://www.cisco.com/c/en/us/support/docs/security/amp-endpoints/213681-best-practices-for-amp-for-endpoint-excl.html) for exclusion behavior. This local view does not establish the complete cloud configuration.
+Unrecognized entries remain visible as **Unknown**. Hover over a type to see the original entry and parsing details. **Save all tabs…** exports both complete lists, including decoded types, child-process scope, and original entries, even when a filter is active. The viewer reads configured rules; it does not establish runtime enforcement or the complete cloud configuration. Check IOC rules in the Secure Endpoint console.
 
-![Read-only stored policy exclusion entries](images/View_Exclusions.png)
+The general and process list locations are also used by the [public upstream collector](https://github.com/CiscoSecurity/amp-05-health-checker-windows/blob/master/data.py). See Cisco’s public [exclusion guide](https://www.cisco.com/c/en/us/support/docs/security/amp-endpoints/213681-best-practices-for-amp-for-endpoint-excl.html) for exclusion behavior.
 
-![Stored process exclusion entries in dark mode](images/View_Process_Exclusions_Dark.png)
+![Typed policy exclusions with a type filter](images/View_Exclusions.png)
+
+![Process protection types and child-process scope in dark mode](images/View_Process_Exclusions_Dark.png)
 
 ### Generate Diagnostic
 
