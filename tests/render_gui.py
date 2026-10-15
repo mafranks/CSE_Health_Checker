@@ -12,7 +12,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from qt_helpers import APP, wait_until
 from gui_fixtures import sample_data
 from main_page import MainWindow
-from certificates import read_certificate_file
 from connectivity import endpoints_for_region
 import popups
 
@@ -43,16 +42,13 @@ def capture_details(window, output):
 
 
 def capture_tools(window, data, output):
-    """Render each tool with synthetic endpoint data and public reference certificates."""
+    """Render each tool with synthetic endpoint data and mocked services."""
     constructors = (
         ("Live_Debugging.png", lambda: popups.LiveScanDialog(data, window.runner, window)),
         ("Live_Top_Processes.png", lambda: popups.LiveScanDialog(data, window.runner, window, processes=True)),
         ("Run_Analysis.png", lambda: popups.AnalysisDialog(data, window.runner, window)),
         ("Manual_Analysis.png", lambda: popups.ManualAnalysisDialog(data, window.runner, window)),
         ("Check_Engines.png", lambda: popups.EnginesDialog(data, window)),
-        ("Certificate_Viewer.png", lambda: popups.CertificatesDialog(window, certificates=read_certificate_file(
-            Path(__file__).parent / "fixtures" / "example_certificate.pem"))),
-        ("Trusted_Signers.png", lambda: popups.TrustedSignersDialog(window)),
         ("Recommend_Exclusions.png", lambda: popups.RecommendationsDialog(data, window.runner, window)),
         ("View_Exclusions.png", lambda: popups.ExclusionsDialog(data, window)),
     )

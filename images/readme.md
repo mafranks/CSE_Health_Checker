@@ -1,6 +1,6 @@
 # README screenshots
 
-The current app screenshots are rendered from the real Qt widgets using synthetic connector data from `tests/gui_fixtures.py` and public publisher certificate metadata. They illustrate controls, layouts, and result formats. Connectivity outcomes and recommendation results are mocked, and no live connector, credentials, or cloud account is used. Windows fonts and native window decorations may differ from the rendered previews.
+The current app screenshots are rendered from the real Qt widgets using synthetic connector data from `tests/gui_fixtures.py`. They illustrate controls, layouts, and result formats. Connectivity outcomes and recommendation results are mocked, and no live connector, credentials, or cloud account is used. Windows fonts and native window decorations may differ from the rendered previews.
 
 | File | View |
 | --- | --- |
@@ -13,8 +13,6 @@ The current app screenshots are rendered from the real Qt widgets using syntheti
 | `Run_Analysis.png` | Analysis categories and export controls |
 | `Manual_Analysis.png` | Independent log selection and manual analysis |
 | `Connectivity.png` | Regional connectivity settings and per-host outcomes |
-| `Certificate_Viewer.png` | A synthetic public certificate with fingerprints and validity tabs |
-| `Trusted_Signers.png` | Publisher certificate identities with valid-date, historical, and unverified tabs |
 | `Recommend_Exclusions.png` | Illustrative exclusion-set candidates and catalog freshness |
 | `Check_Engines.png` | Read-only engine policy settings |
 | `View_Exclusions.png` | Stored local policy exclusion entries |

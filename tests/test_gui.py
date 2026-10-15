@@ -328,7 +328,7 @@ class QtGuiTests(unittest.TestCase):
         self.assertIn("not installed", window.setup_notice.text())
         self.assertTrue(window.refresh_button.isEnabled())
         self.assertTrue(window.action_buttons["connectivity"].isEnabled())
-        self.assertTrue(window.action_buttons["certificates"].isEnabled())
+        self.assertEqual([key for key, control in window.action_buttons.items() if control.isEnabled()], ["connectivity"])
         self.assertFalse(window.action_buttons["live"].isEnabled())
         window.close()
         self.assertTrue(window.can_close)
@@ -356,46 +356,8 @@ class QtGuiTests(unittest.TestCase):
         """Suppress completed diagnostic reports after the user has requested shutdown."""
         self.window.closing = True
         with patch.object(self.window, "show_dialog") as show:
-            self.window.show_certificates()
+            self.window.handle_action("connectivity")
         show.assert_not_called()
-
-    def test_certificates_is_standalone_and_has_no_bundled_catalog(self):
-        """Open an empty local viewer without connector access or bundled issuer information."""
-        self.window.data = None
-        self.window.set_busy(False)
-        with patch("subprocess.check_output") as command, patch.object(self.window.runner, "submit") as submit:
-            with patch.object(self.window, "show_dialog") as show:
-                self.window.action_buttons["certificates"].click()
-        command.assert_not_called()
-        submit.assert_not_called()
-        dialog = show.call_args.args[0]
-        self.addCleanup(dialog.close)
-        self.assertEqual(dialog.windowTitle(), "Certificate viewer")
-        self.assertTrue(all(view.isReadOnly() for view in dialog.views.values()))
-        self.assertEqual([dialog.tabs.tabText(i) for i in range(dialog.tabs.count())],
-                         ["Valid dates (0)", "Historical (0)"])
-        self.assertFalse(dialog.save_button.isEnabled())
-
-    def test_certificate_tabs_export_selected_certificates_and_preserve_results_on_failure(self):
-        """Keep expired variants separate and preserve the previous selection after invalid input."""
-        from test_certificates import CURRENT, EXPIRED, NOW
-        dialog = popups.CertificatesDialog(certificates=(CURRENT, EXPIRED), as_of=NOW)
-        self.addCleanup(dialog.close)
-        self.assertEqual([dialog.tabs.tabText(i) for i in range(dialog.tabs.count())],
-                         ["Valid dates (1)", "Historical (1)"])
-        self.assertIn(CURRENT.sha256, dialog.views["Valid dates"].toPlainText())
-        self.assertNotIn(EXPIRED.sha256, dialog.views["Valid dates"].toPlainText())
-        self.assertIn(EXPIRED.sha256, dialog.views["Historical"].toPlainText())
-        with patch.object(popups, "save_text") as save:
-            dialog.save_button.click()
-        for view in dialog.views.values():
-            self.assertIn(view.toPlainText(), save.call_args.args[1])
-        reports = dialog.reports.copy()
-        with patch.object(popups.QFileDialog, "getOpenFileNames", return_value=(["invalid.pem"], "")):
-            with patch.object(popups, "load_certificates", side_effect=ValueError("Invalid certificate")):
-                dialog.open_button.click()
-        self.assertEqual(dialog.reports, reports)
-        self.assertEqual(dialog.notice.text(), "Invalid certificate")
 
     def test_live_preview_limit_does_not_limit_export(self):
         """Preview the busiest 500 pairs and export all pairs with complete counts."""
@@ -503,23 +465,6 @@ class QtGuiTests(unittest.TestCase):
             dialog.wildcard_button.click()
         self.assertEqual(report.call_args.args[2], pattern)
         report.return_value.exec.assert_called_once_with()
-
-    def test_trusted_signer_reference_is_standalone_and_exports_all_tabs(self):
-        """Keep built-in current, historical, and unresolved references available without a connector."""
-        self.window.data = None
-        self.window.set_busy(False)
-        self.assertTrue(self.window.action_buttons["signers"].isEnabled())
-        with patch.object(self.window, "show_dialog") as show:
-            self.window.action_buttons["signers"].click()
-        dialog = show.call_args.args[0]
-        self.addCleanup(dialog.close)
-        for title in ("Valid dates", "Historical", "Unverified"):
-            self.assertIn(title, dialog.views)
-            self.assertTrue(dialog.views[title].isReadOnly())
-        with patch.object(popups, "save_text") as save:
-            dialog.save_button.click()
-        for view in dialog.views.values():
-            self.assertIn(view.toPlainText(), save.call_args.args[1])
 
     def test_recommendations_refresh_in_background_and_export_catalog_details(self):
         """Show candidate sets with source age, allow refresh, and save complete results."""

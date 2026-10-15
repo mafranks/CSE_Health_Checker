@@ -19,18 +19,16 @@ Originally developed by Matthew Franks and Brandon Macer.
 - Read-only local policy exclusion lists with complete entry copying and text exports.
 - Full-screen tool windows, selectable results, clipboard copying, and complete text exports.
 - A standalone connectivity test that can run without a connector or API credentials.
-- A local certificate viewer with fingerprints and separate current, historical, and future validity categories.
-- A bundled trusted signer reference with publisher fingerprints, validity-date categories, and unresolved identities clearly separated.
 - Exclusion-set recommendations from running software, with catalog freshness and an explicit offline fallback.
 - Connector debug detection and temporary logging cleanup that preserves settings created outside the tool.
 
 ## Installation
 
-Run the prebuilt [SE_Health_Checker.exe](SE_Health_Checker.exe) on Windows, or use the source and build instructions below. The repository also contains synthetic test fixtures. Runtime configuration, logs, diagnostics, and other generated build outputs are excluded from version control.
+Run the source on Windows, or build an executable using the instructions below. The repository also contains synthetic test fixtures. Runtime configuration, logs, diagnostics, and generated build outputs are excluded from version control.
 
 The source GUI uses [PySide6 (Qt for Python)](https://doc.qt.io/qtforpython-6/gettingstarted.html). The project's runtime requirements target **64-bit Python 3.10–3.15**. Qt 6.12 supports **Windows 10 (1809 or later) and Windows 11**; see [Qt's Windows platform requirements](https://doc.qt.io/qt-6/windows.html). Install the versions selected by `requirements.txt`, which allows PySide6 6.x releases from 6.12 onward. No PySimpleGUI account or license key is required.
 
-Configure `.env` as described in [API Credentials](#api-credentials) before launching the connector tools. Connectivity test, Certificate viewer, and Trusted signers can run without that configuration.
+Configure `.env` as described in [API Credentials](#api-credentials) before launching the connector tools. Connectivity test can run without that configuration.
 
 Start from a fresh checkout, create a local configuration file, then install and run the source:
 
@@ -239,22 +237,6 @@ The **IPs** analysis tab ranks addresses extracted from the connector log. These
 
 ![Read-only engine policy settings with enabled and disabled values](images/Check_Engines.png)
 
-### Certificate viewer
-
-**Certificate viewer** reads certificate-only PEM, CER, CRT, or DER files that you select locally. It shows each certificate's common name, issuer, SHA-1 and SHA-256 fingerprints calculated from DER, and exact UTC validity dates. It works without a connector or API credentials.
-
-![Local certificate viewer with fingerprints and separate validity-date tabs](images/Certificate_Viewer.png)
-
-**Valid dates** contains certificates within their validity period; **Historical** contains expired certificates. **Not yet valid** appears when needed. **Save all tabs…** exports all categories. Date validity does not establish Windows trust, revocation status, or whether a signer is accepted by Secure Endpoint. The viewer displays locally selected files and does not change certificate stores. Files containing PEM private keys are rejected.
-
-### Trusted signers
-
-**Trusted signers** opens a separate bundled reference containing the 19 requested signer names and 18 publisher-verified certificate variants. Publisher metadata was verified on **October 14, 2026**. Each verified variant includes its issuer, SHA-1 and SHA-256 fingerprints, exact UTC validity dates, and public publisher source. The **Valid dates**, **Historical**, and optional **Not yet valid** tabs are calculated when the reference opens. The **Unverified** tab retains names whose exact publisher certificate has not been identified; fingerprints are not guessed.
-
-This reference does not check installation, current Windows trust, revocation, or signer acceptance. It is separate from **Certificate viewer**, which continues to read certificate files selected locally. **Save all tabs…** exports the complete reference.
-
-![Trusted signer reference with separate current, historical, and unverified identities](images/Trusted_Signers.png)
-
 ### Manual SFC Analysis
 
 **Manual SFC analysis** reads an independent snapshot of an `sfc.exe.log` file, including logs copied from another machine. The connector's current log is selected initially. Click **Choose SFC log…** to select another file, then **Analyze** to populate the results. **Use connector log** selects the default source again. Selecting or analyzing a manual log does not change the live collector's source or results.
@@ -283,7 +265,7 @@ Run the regression suite from the repository directory:
 python -m unittest discover -s tests -v
 ```
 
-Install `requirements.txt` first. The tests use real Qt widgets with an offscreen platform, temporary logs/settings, and stub Windows/API services, so they can run without a connector, API credentials, or a visible desktop. They cover light/dark themes, saved appearance, typed exclusions and leading wildcards, public catalog refresh and fallback, signer fingerprints and dates, connector debug ownership, layout resizing, background work, exports, manual snapshots, live pause/resume, policy failures, and shutdown while operations are active. Validate the actual GUI and connector diagnostic tools on Windows before distributing a rebuilt executable.
+Install `requirements.txt` first. The tests use real Qt widgets with an offscreen platform, temporary logs/settings, and stub Windows/API services, so they can run without a connector, API credentials, or a visible desktop. They cover light/dark themes, saved appearance, typed exclusions and leading wildcards, public catalog refresh and fallback, connector debug ownership, layout resizing, background work, exports, manual snapshots, live pause/resume, policy failures, and shutdown while operations are active. Validate the actual GUI and connector diagnostic tools on Windows before distributing a rebuilt executable.
 
 Regenerate illustrative screenshots with the following commands. The renderer uses synthetic data and mocked services; it does not connect to a live endpoint or cloud account.
 

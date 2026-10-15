@@ -32,4 +32,3 @@ CLAUDE.md
 *.cer
 *.tar
 *.gz
-!tests/fixtures/example_certificate.pem

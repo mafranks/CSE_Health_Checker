@@ -25,9 +25,8 @@ ACTIONS = (
     ("Live paths / processes", "live"), ("Run analysis", "analysis"),
     ("Live top processes", "processes"), ("Manual SFC analysis", "manual"),
     ("Connectivity test", "connectivity"), ("Engine status", "engines"),
-    ("Certificate viewer", "certificates"), ("Generate diagnostic", "diagnostic"),
-    ("View exclusions", "exclusions"),
-    ("Trusted signers", "signers"), ("Recommend exclusions", "recommendations"),
+    ("Generate diagnostic", "diagnostic"), ("View exclusions", "exclusions"),
+    ("Recommend exclusions", "recommendations"),
 )
 
 
@@ -260,14 +259,14 @@ class MainWindow(QMainWindow):
         self.check_version("tetra")
 
     def startup_failed(self, message):
-        """Keep standalone tools available and show connector setup errors inline."""
+        """Keep connectivity testing available and show connector setup errors inline."""
         if self.closing:
             self.shutdown()
             return
         self.fields["version"].setText("Unavailable")
         set_badge(self.setup_notice, message, "warning")
         self.setup_notice.show()
-        self.statusBar().showMessage("Connector unavailable · Standalone tools available · Refresh to retry")
+        self.statusBar().showMessage("Connector unavailable · Connectivity test available · Refresh to retry")
 
     def set_busy(self, busy):
         """Disable overlapping actions while keeping window movement and close responsive."""
@@ -275,7 +274,7 @@ class MainWindow(QMainWindow):
         idle = not busy and not self.closing
         self.actions.setEnabled(idle)
         for key, control in self.action_buttons.items():
-            control.setEnabled(idle if key in ("connectivity", "certificates", "signers") else ready)
+            control.setEnabled(idle if key == "connectivity" else ready)
         for control in self.check_buttons.values():
             control.setEnabled(ready)
         self.refresh_button.setEnabled(not busy and not self.closing)
@@ -353,7 +352,7 @@ class MainWindow(QMainWindow):
 
     def handle_action(self, key):
         """Open all existing tools using Qt dialogs and serialize slower diagnostic commands."""
-        if self.runner.busy or self.closing or (self.data is None and key not in ("connectivity", "certificates", "signers")):
+        if self.runner.busy or self.closing or (self.data is None and key != "connectivity"):
             return
         constructors = {"live": partial(popups.LiveScanDialog, self.data, self.runner, self),
                         "processes": partial(popups.LiveScanDialog, self.data, self.runner, self, processes=True),
@@ -362,19 +361,11 @@ class MainWindow(QMainWindow):
                         "connectivity": partial(popups.ConnectivityDialog, self.data, self.runner, self),
                         "engines": partial(popups.EnginesDialog, self.data, self),
                         "exclusions": partial(popups.ExclusionsDialog, self.data, self),
-                        "signers": partial(popups.TrustedSignersDialog, self),
                         "recommendations": partial(popups.RecommendationsDialog, self.data, self.runner, self)}
         if key in constructors:
             self.show_dialog(constructors[key]())
-        elif key == "certificates":
-            self.show_certificates()
         elif key == "diagnostic":
             self.start_operation("Generating diagnostic…", self.data.generate_diagnostic, self.diagnostic_done)
-
-    def show_certificates(self):
-        """Show local certificate fingerprints and dates without connector or API access."""
-        if not self.closing:
-            self.show_dialog(popups.CertificatesDialog(self))
 
     def diagnostic_done(self, result=None):
         """Report the diagnostic launch result without claiming asynchronous creation has finished."""

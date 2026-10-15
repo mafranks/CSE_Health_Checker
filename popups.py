@@ -8,9 +8,7 @@ import webbrowser
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import QComboBox, QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLineEdit, QSizePolicy, QTabWidget, QVBoxLayout, QWidget
 
-from certificates import certificate_reports, load_certificates
 from recommendations import RecommendationReport, format_recommendations
-from trusted_signers import signer_reports
 from exclusions import EXCLUSION_TYPES, PROCESS_TYPES, configured_exclusions
 from connectivity import ConnectivitySettings, REGIONS, check_endpoints, endpoints_for_region, environment_settings, parse_proxy
 from gui import ResultDialog, button, fill_table, save_text, set_badge, table, text_label, text_view
@@ -478,85 +476,6 @@ class TextDialog(ResultDialog):
         save_text(self, self.results.toPlainText())
 
 
-class CertificatesDialog(ResultDialog):
-    """Display only user-selected certificates in separate validity-date tabs."""
-
-    def __init__(self, parent=None, certificates=(), as_of=None):
-        """Create an empty local viewer with bounded certificate selection and complete exports."""
-        super().__init__("Certificate viewer", parent)
-        self.as_of = as_of
-        self.body.addWidget(text_label(
-            "Open certificate-only PEM, CER, CRT, or DER files to view fingerprints and dates. "
-            "These date categories do not establish current trust.", "muted"))
-        self.notice = text_label("No certificates loaded.", "muted")
-        self.body.addWidget(self.notice)
-        self.tabs = QTabWidget()
-        self.views = {}
-        self.body.addWidget(self.tabs, 1)
-        self.open_button = button("Open certificates…", self.choose_files)
-        self.save_button = button("Save all tabs…", self.save_results)
-        self.footer.insertWidget(0, self.open_button)
-        self.footer.insertWidget(1, self.save_button)
-        self.render_certificates(certificates)
-        self.finish_layout()
-
-    def render_certificates(self, certificates):
-        """Replace all categories together after a complete successful file selection."""
-        reports = certificate_reports(certificates, self.as_of)
-        for view in self.views.values():
-            view.deleteLater()
-        self.tabs.clear()
-        self.views = {}
-        self.reports = reports
-        for title, (count, content) in reports.items():
-            view = text_view(content)
-            self.views[title] = view
-            self.tabs.addTab(view, f"{title} ({count})")
-        count = len(certificates)
-        self.notice.setText(f"Loaded {count} certificate variant" + ("." if count == 1 else "s.") if count else "No certificates loaded.")
-        self.save_button.setEnabled(bool(certificates))
-
-    def choose_files(self):
-        """Read selected public certificate files locally and retain results if selection fails."""
-        paths, _ = QFileDialog.getOpenFileNames(
-            self, "Open certificates", "", "Certificates (*.pem *.cer *.crt *.der);;All files (*)")
-        if not paths:
-            return
-        try:
-            certificates = load_certificates(paths)
-        except (OSError, ValueError) as error:
-            self.notice.setText(str(error))
-            return
-        self.render_certificates(certificates)
-
-    def save_results(self):
-        """Export every date category with the same classification timestamp."""
-        save_text(self, "\n\n".join(content for _, content in self.reports.values()))
-
-
-class TrustedSignersDialog(ResultDialog):
-    """Show the bundled publisher reference with separate date and unresolved-identity tabs."""
-
-    def __init__(self, parent=None, reference=None, as_of=None):
-        """Keep reference fingerprints available without a connector or certificate installation."""
-        super().__init__("Trusted signer reference", parent)
-        self.body.addWidget(text_label("Publisher certificate identities for reference. Date validity does not establish current trust or signer acceptance.", "muted"))
-        self.reports = signer_reports(reference, as_of)
-        self.tabs, self.views = QTabWidget(), {}
-        for title, (count, content) in self.reports.items():
-            view = text_view(content)
-            self.views[title] = view
-            self.tabs.addTab(view, f"{title} ({count})")
-        self.body.addWidget(self.tabs, 1)
-        self.save_button = button("Save all tabs…", self.save_results)
-        self.footer.insertWidget(0, self.save_button)
-        self.finish_layout()
-
-    def save_results(self):
-        """Export all verified variants and unresolved names with public publisher sources."""
-        save_text(self, "\n\n".join(content for _, content in self.reports.values()))
-
-
 class RecommendationsDialog(ResultDialog):
     """Match running software to public exclusion-set candidates with explicit catalog freshness."""
 
@@ -739,7 +658,6 @@ class LinksDialog(ResultDialog):
             ("Cisco Community", "https://community.cisco.com/t5/security-knowledge-base/tkb-p/4561-docs-security"),
             ("Exclusion best practices", "https://www.cisco.com/c/en/us/support/docs/security/amp-endpoints/213681-best-practices-for-amp-for-endpoint-excl.html"),
             ("Required server addresses", "https://www.cisco.com/c/en/us/support/docs/security/sourcefire-amp-appliances/118121-technote-sourcefire-00.html"),
-            ("Required root certificates", "https://www.cisco.com/c/en/us/support/docs/security/amp-endpoints/216943-list-of-root-certificates-required-for-a.html"),
             ("Buy me a coffee", "https://www.buymeacoffee.com/mafranks"),
         )
         for title, url in links:
