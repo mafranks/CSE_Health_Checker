@@ -24,7 +24,7 @@ Originally developed by Matthew Franks and Brandon Macer.
 
 ## Installation
 
-Run the source on Windows, or build an executable using the instructions below. The repository also contains synthetic test fixtures. Runtime configuration, logs, diagnostics, and generated build outputs are excluded from version control.
+Run the prebuilt [SE_Health_Checker.exe](SE_Health_Checker.exe) on Windows, or use the source and build instructions below. The repository also contains synthetic test fixtures. Runtime configuration, logs, diagnostics, and other generated build outputs are excluded from version control.
 
 The source GUI uses [PySide6 (Qt for Python)](https://doc.qt.io/qtforpython-6/gettingstarted.html). The project's runtime requirements target **64-bit Python 3.10–3.15**. Qt 6.12 supports **Windows 10 (1809 or later) and Windows 11**; see [Qt's Windows platform requirements](https://doc.qt.io/qt-6/windows.html). Install the versions selected by `requirements.txt`, which allows PySide6 6.x releases from 6.12 onward. No PySimpleGUI account or license key is required.
 
